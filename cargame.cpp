@@ -22,7 +22,7 @@
 #include "common/texture.cpp"
 #include "common/objloader.cpp"
 
-#include "planeTexture.c"
+#include "moon.c"
 #include "skin.c"
 #include "brickTexture.c"
 
@@ -110,7 +110,7 @@ int init_resources() {
 	glEnable(GL_DEPTH_TEST);
 
     //load objects
-    bool res = loadOBJ("plane.obj", vertices, uvs, normals);
+    bool res = loadOBJ("pista.obj", vertices, uvs, normals);
     bool res2 = loadOBJ("simplecar.obj", handVertices, handUV, handNormals);
 
     //setup vertexID
@@ -132,7 +132,7 @@ int init_resources() {
     glGenTextures(1, &textureID1);
     glBindTexture(GL_TEXTURE_2D, textureID1);
 
-    loadTexture(planeTexture.width, planeTexture.height, planeTexture.pixel_data);
+    loadTexture(brickTexture.width, brickTexture.height, brickTexture.pixel_data);
 	textureID1  = glGetUniformLocation(programID, "myTextureSampler");
 
 
@@ -260,6 +260,7 @@ void idle() {
         velocity = 0.000001;
     }
 
+    /*
     //teste de colisão
     if (posz < -9)
         posz = -9;
@@ -269,6 +270,7 @@ void idle() {
         posx = -9;
     if (posx > 9)
         posx = 9;
+    */
 
     //angulo para rotacionar
     if (keystates['a'])
@@ -281,7 +283,6 @@ void idle() {
     if (angle == -10)
         angle = 350;
 
-    system("cls");
     printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
     glutPostRedisplay();
 
@@ -336,7 +337,7 @@ void onDisplay() {
 
     glm::mat4 View       = glm::lookAt(
 
-								glm::vec3(posx-3*cos(pi*(-90-angle)/180), 2, posz-3*sin(pi*(-90-angle)/180)),
+								glm::vec3(posx-3*cos(pi*(-90-angle)/180), 4, posz-3*sin(pi*(-90-angle)/180)),
 								glm::vec3(posx+4*cos(pi*(-90-angle)/180), 1, posz+4*sin(pi*(-90-angle)/180)),
 
 								glm::vec3(0,1,0)
@@ -346,9 +347,13 @@ void onDisplay() {
 
     glm::mat4 MVP;
 
-	MVP        = Projection * View * Model;
+    glm::mat4 transPista = glm::translate(mat4(1.0f), vec3(0, 0.0f, 0));
+
+	MVP        = Projection * View * Model * transPista;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer, 1, uvBuffer, textureID1, 0, vertices.size());
+
+    /*
 
     //parede 1
     glm::mat4 bricktrans = translate(mat4(1.0f), vec3(0, 0, 10)) * rotate(mat4(1.0f), 90.0f, vec3(1,0,0));
@@ -373,10 +378,11 @@ void onDisplay() {
     MVP        = Projection * View * Model * bricktrans4;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer, 1, uvBuffer, textureID3, 2, vertices.size());
+    */
 
     //mão
     glm::mat4 escMao = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
-    glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, 0.5f, posz));
+    glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, 1.5f, posz));
     glm::mat4 fixRot = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
     glm::mat4 rotMao = glm::rotate(mat4(1.0f), angle, vec3(0, 1.0f, 0));
     MVP        = Projection * View * Model * transMao * escMao * rotMao * fixRot;
