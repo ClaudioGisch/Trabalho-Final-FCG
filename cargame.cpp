@@ -55,6 +55,11 @@ GLuint textureID3;
 float posx = 1;
 float posz = 1;
 float angle = 180;
+float velocity = 0.1;
+float acceleration = 0.0005;
+float maxSpeed = 0.3;
+
+// teste
 
 void loadTexture(unsigned int width, unsigned int height, const unsigned char * data) {
 
@@ -166,17 +171,32 @@ void keyboardUp(unsigned char key, int x, int y) {
 
 }
 
-
 void idle() {
 
     //andar para frente ou para tras
     if (keystates['w']) {   //-9 < z|x < 9
-        posz -= 0.3f * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-        posx -= 0.3f * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+        posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+        posx -= velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+        if(velocity < maxSpeed){
+            velocity += acceleration;
+        }
     }
     if (keystates['s']) {
-        posz += 0.3f * cos(pi*angle/180);
-        posx += 0.3f * sin(pi*angle/180);
+        posz += velocity * cos(pi*angle/180);
+        posx += velocity * sin(pi*angle/180);
+        if(velocity < maxSpeed){
+            velocity += acceleration;
+        }
+    }
+
+    if(velocity > 0 && !keystates['w'] && !keystates['s']){
+        posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+        posx -= velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+        velocity -= acceleration * 10;
+    }
+
+    if(velocity < 0){
+        velocity = 0.000001;
     }
 
     //teste de colisão
@@ -200,7 +220,7 @@ void idle() {
     if (angle == -10)
         angle = 350;
 
-    printf("angle: %.0f\tposz = %.1f\tposx = %.1f\n", angle, posz, posx);
+    printf("angle: %.0f\tposz = %.1f\tposx = %.1f\tvel = %f\n", angle, posz, posx, velocity);
     glutPostRedisplay();
 }
 
@@ -252,8 +272,8 @@ void onDisplay() {
 
     glm::mat4 View       = glm::lookAt(
 
-								glm::vec3(posx-2*cos(pi*(-90-angle)/180), 2, posz-2*sin(pi*(-90-angle)/180)),
-								glm::vec3(posx+3*cos(pi*(-90-angle)/180), 1, posz+3*sin(pi*(-90-angle)/180)),
+								glm::vec3(posx-3*cos(pi*(-90-angle)/180), 2, posz-3*sin(pi*(-90-angle)/180)),
+								glm::vec3(posx+4*cos(pi*(-90-angle)/180), 1, posz+4*sin(pi*(-90-angle)/180)),
 
 								glm::vec3(0,1,0)
 						   );
