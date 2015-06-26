@@ -1,0 +1,5 @@
+In codeblocks,
+
+Settings -> Compiler Settings -> Other options
+
+	-trigraphs -std=c++11
