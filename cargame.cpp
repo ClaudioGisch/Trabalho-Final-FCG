@@ -3,6 +3,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+//  To use functions with variables arguments
+#include <stdarg.h>
+
+//  for malloc
+#include <stdlib.h>
 
 #include "GL/glew.h"
 #include "GL/freeglut.h"
@@ -58,6 +63,19 @@ float angle = 180;
 float velocity = 0.1;
 float acceleration = 0.0005;
 float maxSpeed = 0.3;
+
+//  printf prints to file. printw prints to window
+void printw (float x, float y, float z, char* format, ...);
+
+//  The number of frames
+int frameCount = 0;
+
+//  Number of frames per second
+float fps = 0;
+
+//  currentTime - previousTime is the time elapsed
+//  between every call of the Idle function
+int currentTime = 0, previousTime = 0;
 
 // teste
 
@@ -171,7 +189,50 @@ void keyboardUp(unsigned char key, int x, int y) {
 
 }
 
+unsigned long long x;
+unsigned long long y;
+
+
+inline uint64_t rdtsc() {
+    uint32_t lo, hi;
+    __asm__ __volatile__ (
+      "xorl %%eax, %%eax\n"
+      "cpuid\n"
+      "rdtsc\n"
+      : "=a" (lo), "=d" (hi)
+      :
+      : "%ebx", "%ecx");
+    return (uint64_t)hi << 32 | lo;
+}
+
+void calculateFPS()
+{
+    //  Increase frame count
+    frameCount++;
+
+    //  Get the number of milliseconds since glutInit called
+    //  (or first call to glutGet(GLUT ELAPSED TIME)).
+    currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+    //  Calculate time passed
+    int timeInterval = currentTime - previousTime;
+
+    if(timeInterval > 1000)
+    {
+        //  calculate the number of frames per second
+        fps = frameCount / (timeInterval / 1000.0f);
+
+        //  Set time
+        previousTime = currentTime;
+
+        //  Reset frame count
+        frameCount = 0;
+    }
+}
+
 void idle() {
+
+    x = rdtsc();
 
     //andar para frente ou para tras
     if (keystates['w']) {   //-9 < z|x < 9
@@ -220,8 +281,11 @@ void idle() {
     if (angle == -10)
         angle = 350;
 
-    printf("angle: %.0f\tposz = %.1f\tposx = %.1f\tvel = %f\n", angle, posz, posx, velocity);
+    system("cls");
+    printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
     glutPostRedisplay();
+
+    calculateFPS();
 }
 
 //draw method
