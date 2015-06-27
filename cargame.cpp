@@ -16,15 +16,11 @@
 // Include GLM
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-    using namespace glm;
+using namespace glm;
 
 #include "common/shader.cpp"
 #include "common/texture.cpp"
 #include "common/objloader.cpp"
-
-#include "moon.c"
-#include "skin.c"
-#include "brickTexture.c"
 
 #define pi 3.14159265
 
@@ -33,7 +29,7 @@ bool keystates[256];
 GLuint programID;
 GLuint matrixID;        // Get a handle for our "MVP" uniform
 
-//plane
+//road
 GLuint vertexID;
 GLuint vertexBuffer;
 GLuint uvBuffer;
@@ -42,7 +38,7 @@ std::vector<glm::vec3> vertices;
 std::vector<glm::vec2> uvs;
 std::vector<glm::vec3> normals;
 
-//hands
+//car
 GLuint vertexID2;
 GLuint vertexBuffer2;
 GLuint uvBuffer2;
@@ -51,16 +47,15 @@ std::vector<glm::vec3> handVertices;
 std::vector<glm::vec2> handUV;
 std::vector<glm::vec3> handNormals;
 
-//areia
+//sand
 GLuint vertexID3;
 GLuint vertexBuffer3;
 GLuint uvBuffer3;
+GLuint textureID3;
 std::vector<glm::vec3> areiaVertices;
 std::vector<glm::vec2> areiaUV;
 std::vector<glm::vec3> areiaNormals;
 
-//brick texture
-GLuint textureID3;
 
 //player position
 double posx = 1;
@@ -74,10 +69,12 @@ double maxSpeed = 0.3;
 std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
                                     vec2(196.0, 31.0), vec2(196.0, -45.0), vec2(151.0, -45.0), vec2(151.0, -95.0),
                                     vec2(132.0, -95.0), vec2(117.0, -79.0), vec2(43.0, -79.0), vec2(43.0, -45.0),
-                                    vec2(-23.0, -45.0), vec2(-23.0, 0.0)};
+                                    vec2(-23.0, -45.0), vec2(-23.0, 0.0)
+                                   };
 
 // colliders
-typedef struct sphere_col{
+typedef struct sphere_col
+{
     double radius;
     double x;
     double z;
@@ -95,16 +92,18 @@ int currentTime = 0, previousTime = 0;
 
 /** Funções auxiliares */
 
-    /** Sphere Collision */
+/** Sphere Collision */
 
 // uma espécie de construtor
-void getObjectSphereCollider(sphereCollider *collider, int x, int z, int radius){
+void getObjectSphereCollider(sphereCollider *collider, int x, int z, int radius)
+{
     collider->x = x;
     collider->z = z;
     collider->radius = radius;
 }
 
-bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2){
+bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2)
+{
 
     double distance_x = sphere2.x - sphere1.x;
     double distance_z = sphere2.z - sphere1.z;
@@ -123,36 +122,40 @@ bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2){
     return sum_radius > distance;
 }
 
-    /** Vector logic */
+/** Vector logic */
 
-float distance(vec2 p, vec2 v){
+float distance(vec2 p, vec2 v)
+{
     return sqrt(pow(v.y - p.y, 2) + pow(v.x - p.x, 2) );
 }
 
-float length_squared(vec2 p, vec2 v){
+float length_squared(vec2 p, vec2 v)
+{
     return (pow(v.y - p.y, 2) + pow(v.x - p.x, 2));
 }
 
-float dot(vec2 p, vec2 v){
+float dot(vec2 p, vec2 v)
+{
     return p.x * v.x + p.y * v.y;
 }
 
-float minimum_distance(vec2 v, vec2 w, vec2 p) {
-  // Return minimum distance between line segment vw and point p
-  const float l2 = length_squared(v, w);  // i.e. |w-v|^2 -  avoid a sqrt
-  if (l2 == 0.0) return distance(p, v);   // v == w case
-  // Consider the line extending the segment, parameterized as v + t (w - v).
-  // We find projection of point p onto the line.
-  // It falls where t = [(p-v) . (w-v)] / |w-v|^2
-  const float t = dot(p - v, w - v) / l2;
-  if (t < 0.0) return distance(p, v);       // Beyond the 'v' end of the segment
-  else if (t > 1.0) return distance(p, w);  // Beyond the 'w' end of the segment
-  const vec2 projection = v + t * (w - v);  // Projection falls on the segment
-  return distance(p, projection);
+float minimum_distance(vec2 v, vec2 w, vec2 p)
+{
+    // Return minimum distance between line segment vw and point p
+    const float l2 = length_squared(v, w);  // i.e. |w-v|^2 -  avoid a sqrt
+    if (l2 == 0.0) return distance(p, v);   // v == w case
+    // Consider the line extending the segment, parameterized as v + t (w - v).
+    // We find projection of point p onto the line.
+    // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+    const float t = dot(p - v, w - v) / l2;
+    if (t < 0.0) return distance(p, v);       // Beyond the 'v' end of the segment
+    else if (t > 1.0) return distance(p, w);  // Beyond the 'w' end of the segment
+    const vec2 projection = v + t * (w - v);  // Projection falls on the segment
+    return distance(p, projection);
 }
 
-void loadTexture(unsigned int width, unsigned int height, const unsigned char * data) {
-
+void loadTexture(unsigned int width, unsigned int height, const unsigned char * data)
+{
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     glTexImage2D(
@@ -166,20 +169,18 @@ void loadTexture(unsigned int width, unsigned int height, const unsigned char * 
         GL_UNSIGNED_BYTE, // type
         data // data
     );
-
-
 }
 
-int init_resources() {
-
+int init_resources()
+{
     int i;
-    for (i = 0; i < 256; i++) {
+    for (i = 0; i < 256; i++)
+    {
         keystates[i] = false;
     }
 
-
-	glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
-	glEnable(GL_DEPTH_TEST);
+    glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
+    glEnable(GL_DEPTH_TEST);
 
     //load objects
     bool res = loadOBJ("pista.obj", vertices, uvs, normals);
@@ -202,55 +203,51 @@ int init_resources() {
 
     /**loading textures */
 
-    //plane texture
+    //road texture
     glActiveTexture(GL_TEXTURE0);
     glGenTextures(1, &textureID1);
     glBindTexture(GL_TEXTURE_2D, textureID1);
 
-    loadTexture(brickTexture.width, brickTexture.height, brickTexture.pixel_data);
-	textureID1  = glGetUniformLocation(programID, "myTextureSampler");
+    textureID1  = loadBMP_custom("road.bmp");
 
-    //skin texture
+    //car texture
     glActiveTexture(GL_TEXTURE1);
     glGenTextures(1, &textureID2);
     glBindTexture(GL_TEXTURE_2D, textureID2);
 
-    loadTexture(skin.width, skin.height, skin.pixel_data);
-   // loadTexture(terra.width, terra.height, terra.pixel_data);
-	textureID2  = glGetUniformLocation(programID, "myTextureSampler");
+    textureID2  = loadBMP_custom("car.bmp");
 
-    //brick texture
+    //sand texture
     glActiveTexture(GL_TEXTURE2);
     glGenTextures(1, &textureID3);
     glBindTexture(GL_TEXTURE_2D, textureID3);
 
-    loadTexture(brickTexture.width, brickTexture.height, brickTexture.pixel_data);
-	textureID3  = glGetUniformLocation(programID, "myTextureSampler");
+    textureID3  = loadBMP_custom("sand.bmp");
 
 
     /** generate and bind vertices and uvs */
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+    glGenBuffers(1, &vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
     glGenBuffers(1, &uvBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+    glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 
-	glGenBuffers(1, &vertexBuffer2);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer2);
-	glBufferData(GL_ARRAY_BUFFER, handVertices.size() * sizeof(glm::vec3), &handVertices[0], GL_STATIC_DRAW);
+    glGenBuffers(1, &vertexBuffer2);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer2);
+    glBufferData(GL_ARRAY_BUFFER, handVertices.size() * sizeof(glm::vec3), &handVertices[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &uvBuffer2);
-	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer2);
-	glBufferData(GL_ARRAY_BUFFER, handUV.size() * sizeof(glm::vec2), &handUV[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer2);
+    glBufferData(GL_ARRAY_BUFFER, handUV.size() * sizeof(glm::vec2), &handUV[0], GL_STATIC_DRAW);
 
-	glGenBuffers(1, &vertexBuffer3);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer3);
-	glBufferData(GL_ARRAY_BUFFER, areiaVertices.size() * sizeof(glm::vec3), &areiaVertices[0], GL_STATIC_DRAW);
+    glGenBuffers(1, &vertexBuffer3);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer3);
+    glBufferData(GL_ARRAY_BUFFER, areiaVertices.size() * sizeof(glm::vec3), &areiaVertices[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &uvBuffer3);
-	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer3);
-	glBufferData(GL_ARRAY_BUFFER, areiaUV.size() * sizeof(glm::vec2), &areiaUV[0], GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer3);
+    glBufferData(GL_ARRAY_BUFFER, areiaUV.size() * sizeof(glm::vec2), &areiaUV[0], GL_STATIC_DRAW);
 
     /*
     printf("Number of vertices: %d\n",vertices.size());
@@ -266,13 +263,15 @@ int init_resources() {
 }
 
 
-void keyboardDown(unsigned char key, int x, int y) {
+void keyboardDown(unsigned char key, int x, int y)
+{
 
     keystates[key] = true;
 
 }
 
-void keyboardUp(unsigned char key, int x, int y) {
+void keyboardUp(unsigned char key, int x, int y)
+{
 
     keystates[key] = false;
 
@@ -306,7 +305,8 @@ void calculateFPS()
     }
 }
 
-void idle() {
+void idle()
+{
 
     float mindis = 10000;
     glm::vec2 car_pos;
@@ -318,52 +318,63 @@ void idle() {
 
     //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
 
-    for(i = 0; i < pinpoints.size()-1; i++){
+    for(i = 0; i < pinpoints.size()-1; i++)
+    {
 
         dis = minimum_distance(pinpoints[i], pinpoints[i+1], car_pos);
-        if ( dis < mindis){
+        if ( dis < mindis)
+        {
             mindis = dis;
         }
     }
 
     dis = minimum_distance(pinpoints[i], pinpoints[0], car_pos);
-    if ( dis < mindis){
+    if ( dis < mindis)
+    {
         mindis = dis;
     }
 
     printf("\n Distance to middle: %.2f\n",mindis);
-    if(mindis > 8){
+    if(mindis > 8)
+    {
         printf(" Voce esta na areia!\n");
         velocity -= acceleration/2;
     }
-    else{
+    else
+    {
         printf(" Voce esta na pista!\n");
     }
 
 
     //andar para frente ou para tras
-    if (keystates['w']) {   //-9 < z|x < 9
+    if (keystates['w'])     //-9 < z|x < 9
+    {
         posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
         posx -= velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        if(velocity < maxSpeed){
+        if(velocity < maxSpeed)
+        {
             velocity += acceleration;
         }
     }
-    if (keystates['s']) {
+    if (keystates['s'])
+    {
         posz += velocity * cos(pi*angle/180);
         posx += velocity * sin(pi*angle/180);
-        if(velocity < maxSpeed){
+        if(velocity < maxSpeed)
+        {
             velocity += acceleration;
         }
     }
 
-    if(velocity > 0 && !keystates['w'] && !keystates['s']){
+    if(velocity > 0 && !keystates['w'] && !keystates['s'])
+    {
         posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
         posx -= velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
         velocity -= acceleration * 10;
     }
 
-    if(velocity < 0){
+    if(velocity < 0)
+    {
         velocity = 0.000001;
     }
 
@@ -400,7 +411,8 @@ void idle() {
 //draw method
 void drawMesh(int vAttri, GLuint vBuffer,
               int tAttri, GLuint tBuffer,
-              GLuint texture, GLfloat uniform, int vSize) {
+              GLuint texture, GLfloat uniform, int vSize)
+{
 
     // 1rst attribute buffer : vertices
     glEnableVertexAttribArray(vAttri);
@@ -432,23 +444,24 @@ void drawMesh(int vAttri, GLuint vBuffer,
         (void*)0                          // array buffer offset
     );
 
-     glDrawArrays(GL_TRIANGLES, 0, vSize );
- }
+    glDrawArrays(GL_TRIANGLES, 0, vSize );
+}
 
 
-void onDisplay() {
+void onDisplay()
+{
 
-   	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     glBegin(GL_QUADS);
-        glColor3d(1,0,0);
-        glVertex3f(-1,-1,-10);
-        glColor3d(1,1,0);
-        glVertex3f(1,-1,-10);
-        glColor3d(1,1,1);
-        glVertex3f(1,1,-10);
-        glColor3d(0,1,1);
-        glVertex3f(-1,1,-10);
+    glColor3d(1,0,0);
+    glVertex3f(-1,-1,-10);
+    glColor3d(1,1,0);
+    glVertex3f(1,-1,-10);
+    glColor3d(1,1,1);
+    glVertex3f(1,1,-10);
+    glColor3d(0,1,1);
+    glVertex3f(-1,1,-10);
     glEnd();
 
     glUseProgram(programID);
@@ -457,50 +470,25 @@ void onDisplay() {
 
     glm::mat4 View       = glm::lookAt(
 
-								glm::vec3(posx-3*cos(pi*(-90-angle)/180), 4, posz-3*sin(pi*(-90-angle)/180)),
-								glm::vec3(posx+4*cos(pi*(-90-angle)/180), 1, posz+4*sin(pi*(-90-angle)/180)),
+                               glm::vec3(posx-3*cos(pi*(-90-angle)/180), 4, posz-3*sin(pi*(-90-angle)/180)),
+                               glm::vec3(posx+4*cos(pi*(-90-angle)/180), 1, posz+4*sin(pi*(-90-angle)/180)),
 
-								glm::vec3(0,1,0)
-						   );
+                               glm::vec3(0,1,0)
+                           );
 
     glm::mat4 Model      = glm::mat4(1.0f);
 
     glm::mat4 MVP;
 
+    // road
+
     glm::mat4 transPista = glm::translate(mat4(1.0f), vec3(0, 0.0f, 0));
 
-	MVP        = Projection * View * Model * transPista;
+    MVP        = Projection * View * Model * transPista;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer, 1, uvBuffer, textureID1, 0, vertices.size());
 
-    /*
-
-    //parede 1
-    glm::mat4 bricktrans = translate(mat4(1.0f), vec3(0, 0, 10)) * rotate(mat4(1.0f), 90.0f, vec3(1,0,0));
-    MVP        = Projection * View * Model * bricktrans;
-    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer, 1, uvBuffer, textureID3, 2, vertices.size());
-
-    //parede 2
-    glm::mat4 bricktrans2 = translate(mat4(1.0f), vec3(0, 0, -10)) * rotate(mat4(1.0f), 90.0f, vec3(1,0,0));
-    MVP        = Projection * View * Model * bricktrans2;
-    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer, 1, uvBuffer, textureID3, 2, vertices.size());
-
-    //parede 3
-    glm::mat4 bricktrans3 = translate(mat4(1.0f), vec3(10, 0, 0)) * rotate(mat4(1.0f), 90.0f, vec3(1,0,0)) * rotate(mat4(1.0f), 90.0f, vec3(0,0,1));
-    MVP        = Projection * View * Model * bricktrans3;
-    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer, 1, uvBuffer, textureID3, 2, vertices.size());
-
-    //parede 4
-    glm::mat4 bricktrans4 = translate(mat4(1.0f), vec3(-10, 0, 0)) * rotate(mat4(1.0f), 90.0f, vec3(1,0,0)) * rotate(mat4(1.0f), 90.0f, vec3(0,0,1));
-    MVP        = Projection * View * Model * bricktrans4;
-    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer, 1, uvBuffer, textureID3, 2, vertices.size());
-    */
-
-    //mão
+    // car
     glm::mat4 escMao = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
     glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, 1.5f, posz));
     glm::mat4 fixRot = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
@@ -509,33 +497,35 @@ void onDisplay() {
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID2, 1, handVertices.size());
 
-    // areia
+    // sand
     glm::mat4 transAreia = glm::translate(mat4(1.0f), vec3(0.0f, -0.1f, 0.0f));
     MVP        = Projection * View * Model * transAreia;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID1, 0, areiaVertices.size());
+    drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID3, 2, areiaVertices.size());
 
     //disable
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
 
-	glutSwapBuffers();
+    glutSwapBuffers();
     glutPostRedisplay();
 
 }
 
 
 //libera recursos
-void free_resources() {
+void free_resources()
+{
 
     glDeleteBuffers(1, &vertexBuffer);
-	glDeleteVertexArrays(1, &vertexID);
+    glDeleteVertexArrays(1, &vertexID);
     glDeleteProgram(programID);
 
 }
 
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
 
     //inicia janela
     glutInit(&argc, argv);
@@ -544,12 +534,14 @@ int main(int argc, char* argv[]) {
     glutCreateWindow("FPS Game");
 
     GLenum glew_status = glewInit();
-    if (glew_status != GLEW_OK) {
+    if (glew_status != GLEW_OK)
+    {
         fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
         return 1;
     }
 
-    if (init_resources() != 0) {
+    if (init_resources() != 0)
+    {
 
         glutDisplayFunc(onDisplay);
 
