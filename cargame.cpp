@@ -70,6 +70,12 @@ double velocity = 0.1;
 double acceleration = 0.0005;
 double maxSpeed = 0.3;
 
+// terrain info
+std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
+                                    vec2(196.0, 31.0), vec2(196.0, -45.0), vec2(151.0, -45.0), vec2(151.0, -95.0),
+                                    vec2(132.0, -95.0), vec2(117.0, -79.0), vec2(43.0, -79.0), vec2(43.0, -45.0),
+                                    vec2(-23.0, -45.0), vec2(-23.0, 0.0)};
+
 // colliders
 typedef struct sphere_col{
     double radius;
@@ -302,6 +308,39 @@ void calculateFPS()
 
 void idle() {
 
+    float mindis = 10000;
+    glm::vec2 car_pos;
+    car_pos.x = posx;
+    car_pos.y = posz;
+    float dis;
+    int j = 0;
+    int i = 0;
+
+    //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
+
+    for(i = 0; i < pinpoints.size()-1; i++){
+
+        dis = minimum_distance(pinpoints[i], pinpoints[i+1], car_pos);
+        if ( dis < mindis){
+            mindis = dis;
+        }
+    }
+
+    dis = minimum_distance(pinpoints[i], pinpoints[0], car_pos);
+    if ( dis < mindis){
+        mindis = dis;
+    }
+
+    printf("\n Distance to middle: %.2f\n",mindis);
+    if(mindis > 8){
+        printf(" Voce esta na areia!\n");
+        velocity -= acceleration/2;
+    }
+    else{
+        printf(" Voce esta na pista!\n");
+    }
+
+
     //andar para frente ou para tras
     if (keystates['w']) {   //-9 < z|x < 9
         posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
@@ -352,6 +391,7 @@ void idle() {
         angle = 350;
 
     printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
+
     glutPostRedisplay();
 
     calculateFPS();
