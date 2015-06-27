@@ -55,17 +55,20 @@ std::vector<glm::vec3> handNormals;
 //brick texture
 GLuint textureID3;
 
-
 //player position
-float posx = 1;
-float posz = 1;
+double posx = 1;
+double posz = 1;
 float angle = 180;
-float velocity = 0.1;
-float acceleration = 0.0005;
-float maxSpeed = 0.3;
+double velocity = 0.1;
+double acceleration = 0.0005;
+double maxSpeed = 0.3;
 
-//  printf prints to file. printw prints to window
-void printw (float x, float y, float z, char* format, ...);
+// colliders
+typedef struct sphere_col{
+    double radius;
+    double x;
+    double z;
+} sphereCollider;
 
 //  The number of frames
 int frameCount = 0;
@@ -77,7 +80,33 @@ float fps = 0;
 //  between every call of the Idle function
 int currentTime = 0, previousTime = 0;
 
-// teste
+// Funções auxiliares
+
+// uma espécie de construtor
+void getObjectSphereCollider(sphereCollider *collider, int x, int z, int radius){
+    collider->x = x;
+    collider->z = z;
+    collider->radius = radius;
+}
+
+bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2){
+
+    double distance_x = sphere2.x - sphere1.x;
+    double distance_z = sphere2.z - sphere1.z;
+    double distance = sqrt(distance_x*distance_x + distance_z*distance_z);
+    double sum_radius = sphere1.radius + sphere2.radius;
+    //printf("Sphere 1 x: %.2f\n", sphere1.x);
+    //printf("Sphere 1 z: %.2f\n", sphere1.z);
+    //printf("Sphere 2 x: %.2f\n", sphere2.x);
+    //printf("Sphere 2 z: %.2f\n", sphere2.z);
+    //printf("Sqrt: %.2f\n", sqrt(1.0 + 9.0));
+    //printf("Distance x: %.2f\n", distance_x);
+    //printf("Distance z: %.2f\n", distance_z);
+    //printf(" Distance: %.2f\n",distance);
+    //printf(" Sum Radius: %.2f\n",sum_radius);
+
+    return sum_radius > distance;
+}
 
 void loadTexture(unsigned int width, unsigned int height, const unsigned char * data) {
 
@@ -106,7 +135,7 @@ int init_resources() {
     }
 
 
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
 	glEnable(GL_DEPTH_TEST);
 
     //load objects
@@ -232,6 +261,36 @@ void calculateFPS()
 
 void idle() {
 
+    // 2 2 1
+    // 3 5 1
+
+    sphereCollider sphere1;
+    sphereCollider sphere2;
+    sphereCollider sphere3;
+    sphereCollider sphere4;
+
+    getObjectSphereCollider(&sphere1, 2.0, 2.0, 1.0);
+    getObjectSphereCollider(&sphere2, 3.0, 5.0, 1.0);
+    getObjectSphereCollider(&sphere3, 4.0, 3.0, 2.0);
+    getObjectSphereCollider(&sphere4, 5.0, 5.0, 1.0);
+
+    for(int i = 0; i < 100; i++){
+        printf("%d ", SphereColliderCmp(sphere1, sphere2));
+        printf("%d ", SphereColliderCmp(sphere1, sphere3));
+        printf("%d ", SphereColliderCmp(sphere1, sphere4));
+        printf("%d ", SphereColliderCmp(sphere2, sphere3));
+        printf("%d ", SphereColliderCmp(sphere2, sphere4));
+        printf("%d ", SphereColliderCmp(sphere3, sphere4));
+      /*
+    printf("Colidindo 1 2: %d\n", SphereColliderCmp(sphere1, sphere2));
+    printf("Colidindo 1 3: %d\n", SphereColliderCmp(sphere1, sphere3));
+    printf("Colidindo 1 4: %d\n", SphereColliderCmp(sphere1, sphere4));
+    printf("Colidindo 2 3: %d\n", SphereColliderCmp(sphere2, sphere3));
+    printf("Colidindo 2 4: %d\n", SphereColliderCmp(sphere2, sphere4));
+    printf("Colidindo 3 4: %d\n", SphereColliderCmp(sphere3, sphere4));
+     */
+    }
+
     x = rdtsc();
 
     //andar para frente ou para tras
@@ -331,6 +390,18 @@ void drawMesh(int vAttri, GLuint vBuffer,
 void onDisplay() {
 
    	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+   	glBegin(GL_QUADS);
+        glColor3d(1,0,0);
+        glVertex3f(-1,-1,-10);
+        glColor3d(1,1,0);
+        glVertex3f(1,-1,-10);
+        glColor3d(1,1,1);
+        glVertex3f(1,1,-10);
+        glColor3d(0,1,1);
+        glVertex3f(-1,1,-10);
+    glEnd();
+
     glUseProgram(programID);
 
     glm::mat4 Projection = glm::perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f);
