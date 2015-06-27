@@ -51,6 +51,13 @@ std::vector<glm::vec3> handVertices;
 std::vector<glm::vec2> handUV;
 std::vector<glm::vec3> handNormals;
 
+//areia
+GLuint vertexID3;
+GLuint vertexBuffer3;
+GLuint uvBuffer3;
+std::vector<glm::vec3> areiaVertices;
+std::vector<glm::vec2> areiaUV;
+std::vector<glm::vec3> areiaNormals;
 
 //brick texture
 GLuint textureID3;
@@ -80,7 +87,9 @@ float fps = 0;
 //  between every call of the Idle function
 int currentTime = 0, previousTime = 0;
 
-// Funções auxiliares
+/** Funções auxiliares */
+
+    /** Sphere Collision */
 
 // uma espécie de construtor
 void getObjectSphereCollider(sphereCollider *collider, int x, int z, int radius){
@@ -106,6 +115,34 @@ bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2){
     //printf(" Sum Radius: %.2f\n",sum_radius);
 
     return sum_radius > distance;
+}
+
+    /** Vector logic */
+
+float distance(vec2 p, vec2 v){
+    return sqrt(pow(v.y - p.y, 2) + pow(v.x - p.x, 2) );
+}
+
+float length_squared(vec2 p, vec2 v){
+    return (pow(v.y - p.y, 2) + pow(v.x - p.x, 2));
+}
+
+float dot(vec2 p, vec2 v){
+    return p.x * v.x + p.y * v.y;
+}
+
+float minimum_distance(vec2 v, vec2 w, vec2 p) {
+  // Return minimum distance between line segment vw and point p
+  const float l2 = length_squared(v, w);  // i.e. |w-v|^2 -  avoid a sqrt
+  if (l2 == 0.0) return distance(p, v);   // v == w case
+  // Consider the line extending the segment, parameterized as v + t (w - v).
+  // We find projection of point p onto the line.
+  // It falls where t = [(p-v) . (w-v)] / |w-v|^2
+  const float t = dot(p - v, w - v) / l2;
+  if (t < 0.0) return distance(p, v);       // Beyond the 'v' end of the segment
+  else if (t > 1.0) return distance(p, w);  // Beyond the 'w' end of the segment
+  const vec2 projection = v + t * (w - v);  // Projection falls on the segment
+  return distance(p, projection);
 }
 
 void loadTexture(unsigned int width, unsigned int height, const unsigned char * data) {
@@ -141,6 +178,7 @@ int init_resources() {
     //load objects
     bool res = loadOBJ("pista.obj", vertices, uvs, normals);
     bool res2 = loadOBJ("simplecar.obj", handVertices, handUV, handNormals);
+    bool res3 = loadOBJ("areia.obj", areiaVertices, areiaUV, areiaNormals);
 
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
@@ -149,12 +187,14 @@ int init_resources() {
     glGenVertexArrays(1, &vertexID2);
     glBindVertexArray(vertexID2);
 
+    glGenVertexArrays(1, &vertexID3);
+    glBindVertexArray(vertexID3);
+
     //programID = LoadShaders( "vertexshader.vs", "fragmentshader.fs" );
     programID = LoadShaders( "TransformVertexShader.vertexshader", "TextureFragmentShader.fragmentshader" );
     matrixID = glGetUniformLocation(programID, "MVP");
 
-
-    //loading textures
+    /**loading textures */
 
     //plane texture
     glActiveTexture(GL_TEXTURE0);
@@ -163,15 +203,6 @@ int init_resources() {
 
     loadTexture(brickTexture.width, brickTexture.height, brickTexture.pixel_data);
 	textureID1  = glGetUniformLocation(programID, "myTextureSampler");
-
-
-    //generate and bind vertices and uvs
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
-    glGenBuffers(1, &uvBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 
     //skin texture
     glActiveTexture(GL_TEXTURE1);
@@ -191,7 +222,14 @@ int init_resources() {
 	textureID3  = glGetUniformLocation(programID, "myTextureSampler");
 
 
-    //generate and bind vertices and uvs
+    /** generate and bind vertices and uvs */
+	glGenBuffers(1, &vertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+    glGenBuffers(1, &uvBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+
 	glGenBuffers(1, &vertexBuffer2);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer2);
 	glBufferData(GL_ARRAY_BUFFER, handVertices.size() * sizeof(glm::vec3), &handVertices[0], GL_STATIC_DRAW);
@@ -200,6 +238,22 @@ int init_resources() {
 	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer2);
 	glBufferData(GL_ARRAY_BUFFER, handUV.size() * sizeof(glm::vec2), &handUV[0], GL_STATIC_DRAW);
 
+	glGenBuffers(1, &vertexBuffer3);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer3);
+	glBufferData(GL_ARRAY_BUFFER, areiaVertices.size() * sizeof(glm::vec3), &areiaVertices[0], GL_STATIC_DRAW);
+
+    glGenBuffers(1, &uvBuffer3);
+	glBindBuffer(GL_ARRAY_BUFFER, uvBuffer3);
+	glBufferData(GL_ARRAY_BUFFER, areiaUV.size() * sizeof(glm::vec2), &areiaUV[0], GL_STATIC_DRAW);
+
+    /*
+    printf("Number of vertices: %d\n",vertices.size());
+    for(int i = 0; i < vertices.size(); i++){
+
+        //printf("(%d: %.2f, %.2f, %.2f)\n",i,areiaVertices[i].x,areiaVertices[i].y,areiaVertices[i].z);
+        printf("(%.2f, %.2f)\n",vertices[i].x,vertices[i].z);
+    }
+    */
 
     return programID;
 
@@ -220,19 +274,6 @@ void keyboardUp(unsigned char key, int x, int y) {
 
 unsigned long long x;
 unsigned long long y;
-
-
-inline uint64_t rdtsc() {
-    uint32_t lo, hi;
-    __asm__ __volatile__ (
-      "xorl %%eax, %%eax\n"
-      "cpuid\n"
-      "rdtsc\n"
-      : "=a" (lo), "=d" (hi)
-      :
-      : "%ebx", "%ecx");
-    return (uint64_t)hi << 32 | lo;
-}
 
 void calculateFPS()
 {
@@ -260,38 +301,6 @@ void calculateFPS()
 }
 
 void idle() {
-
-    // 2 2 1
-    // 3 5 1
-
-    sphereCollider sphere1;
-    sphereCollider sphere2;
-    sphereCollider sphere3;
-    sphereCollider sphere4;
-
-    getObjectSphereCollider(&sphere1, 2.0, 2.0, 1.0);
-    getObjectSphereCollider(&sphere2, 3.0, 5.0, 1.0);
-    getObjectSphereCollider(&sphere3, 4.0, 3.0, 2.0);
-    getObjectSphereCollider(&sphere4, 5.0, 5.0, 1.0);
-
-    for(int i = 0; i < 100; i++){
-        printf("%d ", SphereColliderCmp(sphere1, sphere2));
-        printf("%d ", SphereColliderCmp(sphere1, sphere3));
-        printf("%d ", SphereColliderCmp(sphere1, sphere4));
-        printf("%d ", SphereColliderCmp(sphere2, sphere3));
-        printf("%d ", SphereColliderCmp(sphere2, sphere4));
-        printf("%d ", SphereColliderCmp(sphere3, sphere4));
-      /*
-    printf("Colidindo 1 2: %d\n", SphereColliderCmp(sphere1, sphere2));
-    printf("Colidindo 1 3: %d\n", SphereColliderCmp(sphere1, sphere3));
-    printf("Colidindo 1 4: %d\n", SphereColliderCmp(sphere1, sphere4));
-    printf("Colidindo 2 3: %d\n", SphereColliderCmp(sphere2, sphere3));
-    printf("Colidindo 2 4: %d\n", SphereColliderCmp(sphere2, sphere4));
-    printf("Colidindo 3 4: %d\n", SphereColliderCmp(sphere3, sphere4));
-     */
-    }
-
-    x = rdtsc();
 
     //andar para frente ou para tras
     if (keystates['w']) {   //-9 < z|x < 9
@@ -391,7 +400,7 @@ void onDisplay() {
 
    	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-   	glBegin(GL_QUADS);
+    glBegin(GL_QUADS);
         glColor3d(1,0,0);
         glVertex3f(-1,-1,-10);
         glColor3d(1,1,0);
@@ -460,6 +469,12 @@ void onDisplay() {
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID2, 1, handVertices.size());
 
+    // areia
+    glm::mat4 transAreia = glm::translate(mat4(1.0f), vec3(0.0f, -0.1f, 0.0f));
+    MVP        = Projection * View * Model * transAreia;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID1, 0, areiaVertices.size());
+
     //disable
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -504,6 +519,7 @@ int main(int argc, char* argv[]) {
         glutIdleFunc(idle);
 
         glutMainLoop();
+
     }
 
     free_resources();
