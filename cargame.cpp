@@ -497,7 +497,7 @@ void idle()
             }
                     // gravel sound
             sound3->play();
-            sound3->setVolume(abs(velocity*1.5));
+            sound3->setVolume(abs(velocity*0.5));
         }
         else
         {
@@ -508,7 +508,7 @@ void idle()
 
         // engine
         sound2->play();
-        sound2->setVolume(abs(velocity)*4);
+        sound2->setVolume(abs(velocity)*1.3);
 
         //andar para frente ou para tras
         if (keystates[upArrow])     //-9 < z|x < 9
