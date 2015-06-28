@@ -2,7 +2,8 @@
 #define GLEW_STATIC
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <unistd.h>
+#include <sys/time.h>
 #include <time.h>
 //  To use functions with variables arguments
 #include <stdarg.h>
@@ -62,14 +63,32 @@ std::vector<glm::vec3> areiaNormals;
 /** Sound */
 
 // background music
-string background = "happyrock.mp3";
-string cardrive = "carrun.mp3";
-string gravel = "gravel.mp3";
+string lightbringer = "playlist/lightbringer.mp3";
+string deathfire_grasp = "playlist/deathfire_grasp.mp3";
+string last_whisper = "playlist/last_whisper.mp3";
+string megitsune = "playlist/megitsune.mp3";
+string angus_mcfife = "playlist/angus_mcfife.mp3";
+string background = "sounds/happyrock.mp3";
+string cardrive = "sounds/carrun.mp3";
+string gravel = "sounds/gravel.mp3";
+int currentMusic = 0;
+bool changingMusic = false;
+int playListSize = 6;
+float volume = 0.1f;
+bool changingVolume = false;
 AudioDevicePtr device(OpenDevice());
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
+OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
+OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
+OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
+OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
+OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
+OutputStreamPtr playList[] = {sound, track1, track2, track3, track4, track5};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 
+//fps
+float game_fps = 60;
 
 //player position
 double posx = 1;
@@ -82,10 +101,11 @@ int upArrow = 0;
 int downArrow = 1;
 int rightArrow = 2;
 int leftArrow = 3;
+float turning_speed = 1.6f;
 double velocity = 0;
 int slowFactorAreia = 5;
-double acceleration = 0.0005;
-double maxSpeed = 0.3;
+double acceleration = 0.005;
+double maxSpeed = 1.0;
 bool drift = false;
 
 // terrain info
@@ -196,9 +216,9 @@ int init_resources()
     glEnable(GL_DEPTH_TEST);
 
     //load objects
-    bool res = loadOBJ("pista.obj", vertices, uvs, normals);
-    bool res2 = loadOBJ("car4.obj", handVertices, handUV, handNormals);
-    bool res3 = loadOBJ("areia.obj", areiaVertices, areiaUV, areiaNormals);
+    bool res = loadOBJ("objects/pista.obj", vertices, uvs, normals);
+    bool res2 = loadOBJ("objects/car4.obj", handVertices, handUV, handNormals);
+    bool res3 = loadOBJ("objects/areia.obj", areiaVertices, areiaUV, areiaNormals);
 
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
@@ -221,21 +241,21 @@ int init_resources()
     glGenTextures(1, &textureID1);
     glBindTexture(GL_TEXTURE_2D, textureID1);
 
-    textureID1  = loadBMP_custom("road.bmp");
+    textureID1  = loadBMP_custom("textures/road.bmp");
 
     //car texture
     glActiveTexture(GL_TEXTURE1);
     glGenTextures(1, &textureID2);
     glBindTexture(GL_TEXTURE_2D, textureID2);
 
-    textureID2  = loadBMP_custom("texture.bmp");
+    textureID2  = loadBMP_custom("textures/texture.bmp");
 
     //sand texture
     glActiveTexture(GL_TEXTURE2);
     glGenTextures(1, &textureID3);
     glBindTexture(GL_TEXTURE_2D, textureID3);
 
-    textureID3  = loadBMP_custom("sand.bmp");
+    textureID3  = loadBMP_custom("textures/sand.bmp");
 
 
     /** generate and bind vertices and uvs */
@@ -301,6 +321,12 @@ void keyboardUp(unsigned char key, int x, int y)
         camAngle = 0;
       }
     }
+    if(key == 'u' || key == 'i'){
+        changingMusic = false;
+    }
+    if(key == 'j' || key == 'k'){
+        changingVolume = false;
+    }
 }
 
 void specialKeyboardDown(int key, int x, int y){
@@ -336,6 +362,20 @@ void specialKeyboardUp(int key, int x, int y){
 unsigned long long x;
 unsigned long long y;
 
+void print(int x, int y, char *message)
+{
+    //set the position of the text in the window using the x and y coordinates
+    glRasterPos2f(x,y);
+    //get the length of the string to display
+    int len = (int) strlen(message);
+
+    //loop to display character by character
+    for (int i = 0; i < len; i++)
+    {
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24,message[i]);
+    }
+}
+
 void calculateFPS()
 {
     //  Increase frame count
@@ -361,18 +401,51 @@ void calculateFPS()
     }
 }
 
-bool playingGravel = false;
-
-void playGravel(){
-    if( playingGravel == false){
-            playingGravel = true;
-        sound3->play();
-        sound3->setVolume(1.0f);
-    }
-}
-
 void idle()
 {
+    struct timeval start_timer, end_timer;
+
+    long mtime, seconds, useconds;
+
+    gettimeofday(&start_timer, NULL);
+
+    if(!(playList[currentMusic]->isPlaying())){
+        playList[currentMusic]->play();
+        playList[currentMusic]->setVolume(volume);
+    }
+    if(keystates['j'] && !changingVolume){
+        if(volume > 0.02f){
+            changingVolume = true;
+            volume -= 0.02;
+            playList[currentMusic]->setVolume(volume);
+        }
+    }
+    if(keystates['k'] && !changingVolume){
+        if(volume < 1.0f){
+            changingVolume = true;
+            volume += 0.02;
+            playList[currentMusic]->setVolume(volume);
+        }
+    }
+    if(keystates['u'] && !changingMusic){
+        changingMusic = true;
+        playList[currentMusic]->stop();
+        playList[currentMusic]->reset();
+        currentMusic -= 1;
+        if(currentMusic <0){
+            currentMusic = playListSize-1;
+        }
+    }
+    if(keystates['i'] && !changingMusic){
+        changingMusic = true;
+        playList[currentMusic]->stop();
+        playList[currentMusic]->reset();
+        currentMusic += 1;
+        if(currentMusic >= playListSize){
+            currentMusic = 0;
+        }
+    }
+
     if(!keystates['p']){
 
         float mindis = 10000;
@@ -414,15 +487,17 @@ void idle()
                     velocity += acceleration * 10;
                 }
             }
-            if(posy > 1.5){
-                posy -= 0.03;
-            }
-            else{
-                posy += 0.015;
+            if(velocity != 0){
+                if(posy > 1.5){
+                    posy -= 0.03;
+                }
+                else{
+                    posy += 0.015;
+                }
             }
                     // gravel sound
             sound3->play();
-            sound3->setVolume(abs(velocity*1.5));
+            sound3->setVolume(abs(velocity*0.5));
         }
         else
         {
@@ -435,6 +510,8 @@ void idle()
         sound2->play();
         sound2->setPitchShift(velocity*5);
         sound2->setVolume(abs(velocity)*4);
+        //sound2->setVolume(abs(velocity)*1.3);
+
 
         //andar para frente ou para tras
         if (keystates[upArrow])     //-9 < z|x < 9
@@ -488,48 +565,34 @@ void idle()
             }
         }
 
-
-        /*
-        //teste de colisão
-        if (posz < -9)
-            posz = -9;
-        if (posz > 9)
-            posz = 9;
-        if (posx < -9)
-            posx = -9;
-        if (posx > 9)
-            posx = 9;
-        */
-
         //angulo para rotacionar
         if (keystates[leftArrow]){
             drift = true;
             if(velocity < 0){
-                angle += 0.5f;
-                if(camAngle <= 0 || camAngle > 350){
-                    camAngle -= 0.5f;
+                angle += turning_speed;
+                if(camAngle <= 20 || camAngle > 350){
+                    camAngle -= turning_speed;
                 }
             }
             if(velocity > 0){
-                angle -= 0.5f;
-                if(camAngle < 10){
-                    camAngle += 0.5f;
+                angle -= turning_speed;
+                if(camAngle < 10 || camAngle > 340){
+                    camAngle += turning_speed;
                 }
             }
         }
         if (keystates[rightArrow]){
             drift = true;
             if(velocity < 0){
-
-                angle -= 0.5f;
-                if(camAngle < 10){
-                    camAngle += 0.5f;
+                angle -= turning_speed;
+                if(camAngle < 10 || camAngle > 340){
+                    camAngle += turning_speed;
                 }
             }
             if(velocity > 0){
-                angle += 0.5f;
-                if(camAngle <= 0 || camAngle > 350){
-                    camAngle -= 0.5f;
+                angle += turning_speed;
+                if(camAngle <= 20 || camAngle > 350){
+                    camAngle -= turning_speed;
                 }
             }
         }
@@ -539,35 +602,31 @@ void idle()
         if(keystates['s']){
             camAngle = 180;
         }
-        if(drift && !keystates[rightArrow]){
-            if(camAngle == 0){
-                drift = false;
-            }
-            else{
-                if(camAngle < 20){
-                    camAngle -= 0.5f;
+        if(drift && !keystates[rightArrow] && !keystates[leftArrow]){
+            if(camAngle > 340 && camAngle < 360){
+                camAngle += turning_speed;
+                if(camAngle >= 360){
+                    drift = false;
+                    camAngle = 0;
                 }
             }
-        }
-        if(drift && !keystates[leftArrow]){
-            if(camAngle == 0){
-                drift = false;
-            }
-            else{
-                if(camAngle > 340){
-                    camAngle += 0.5f;
+            if(camAngle > 0 && camAngle < 20){
+                camAngle -= turning_speed;
+                if(camAngle <= 0){
+                    drift = false;
+                    camAngle = 0;
                 }
             }
         }
 
-        if (angle == 360)
-            angle = 0;
-        if (angle == -10)
-            angle = 350;
-        if (camAngle == 360)
-            camAngle = 0;
-        if (camAngle == -10)
-            camAngle = 350;
+        if (angle >= 360)
+            angle = angle - 360;
+        if (angle < 0)
+            angle = 360 + angle;
+        if (camAngle >= 360)
+            camAngle = camAngle - 360;
+        if (camAngle < 0)
+            camAngle = 360 + camAngle;
 
         printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
 
@@ -591,6 +650,28 @@ void idle()
             camAngle = 180;
         }
     }
+
+    gettimeofday(&end_timer, NULL);
+
+    seconds  = end_timer.tv_sec  - start_timer.tv_sec;
+    useconds = end_timer.tv_usec - start_timer.tv_usec;
+
+    mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+
+    while(mtime < 1000.0f/game_fps){
+        gettimeofday(&end_timer, NULL);
+
+        seconds  = end_timer.tv_sec  - start_timer.tv_sec;
+        useconds = end_timer.tv_usec - start_timer.tv_usec;
+
+        mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+    }
+
+    char gameName[] = "Super Speed Runners";
+
+    print(0.1f, 0.1f, gameName);
+
+    printf("Elapsed time: %ld milliseconds\n", mtime);
 }
 
 //draw method
@@ -716,11 +797,7 @@ int main(int argc, char* argv[])
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
     glutInitWindowSize(800, 600);
-    glutCreateWindow("FPS Game");
-
-    sound->play();
-    sound->setRepeat(true);
-    sound->setVolume(0.1f);
+    glutCreateWindow("Super Speed Runners");
 
     GLenum glew_status = glewInit();
     if (glew_status != GLEW_OK)
