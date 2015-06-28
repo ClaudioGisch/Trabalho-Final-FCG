@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 //  To use functions with variables arguments
 #include <stdarg.h>
 
@@ -73,8 +74,14 @@ OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 //player position
 double posx = 1;
 double posz = 1;
+double posy = 1.5f;
 float angle = 180;
-double velocity = 0.1;
+int upArrow = 0;
+int downArrow = 1;
+int rightArrow = 2;
+int leftArrow = 3;
+double velocity = 0;
+int slowFactorAreia = 5;
 double acceleration = 0.0005;
 double maxSpeed = 0.3;
 
@@ -268,16 +275,42 @@ int init_resources()
 
 void keyboardDown(unsigned char key, int x, int y)
 {
-
     keystates[key] = true;
-
 }
 
 void keyboardUp(unsigned char key, int x, int y)
 {
-
     keystates[key] = false;
+}
 
+void specialKeyboardDown(int key, int x, int y){
+    if(key == GLUT_KEY_UP){
+        keystates[upArrow] = true;
+    }
+    if(key == GLUT_KEY_DOWN){
+        keystates[downArrow] = true;
+    }
+    if(key == GLUT_KEY_RIGHT){
+        keystates[rightArrow] = true;
+    }
+    if(key == GLUT_KEY_LEFT){
+        keystates[leftArrow] = true;
+    }
+}
+
+void specialKeyboardUp(int key, int x, int y){
+    if(key == GLUT_KEY_UP){
+        keystates[upArrow] = false;
+    }
+    if(key == GLUT_KEY_DOWN){
+        keystates[downArrow] = false;
+    }
+    if(key == GLUT_KEY_RIGHT){
+        keystates[rightArrow] = false;
+    }
+    if(key == GLUT_KEY_LEFT){
+        keystates[leftArrow] = false;
+    }
 }
 
 unsigned long long x;
@@ -350,6 +383,21 @@ void idle()
     if(mindis > 8)
     {
         printf(" Voce esta na areia!\n");
+        if (abs(velocity) > maxSpeed/slowFactorAreia){
+            if (velocity > 0)
+            {
+                velocity -= acceleration * 10;
+            }
+            else{
+                velocity += acceleration * 10;
+            }
+        }
+        if(posy > 1.5){
+            posy -= 0.03;
+        }
+        else{
+            posy += 0.015;
+        }
         velocity -= acceleration/2;
 
         // gravel sound
@@ -362,6 +410,7 @@ void idle()
     {
         sound3->stop();
         printf(" Voce esta na pista!\n");
+        posy = 1.5f;
     }
 
     // engine
@@ -372,36 +421,57 @@ void idle()
 
 
     //andar para frente ou para tras
-    if (keystates['w'])     //-9 < z|x < 9
+    if (keystates[upArrow])     //-9 < z|x < 9
     {
-        posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-        posx -= velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        if(velocity < maxSpeed)
+        posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+        posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+        if(abs(velocity) < maxSpeed)
         {
-            velocity += acceleration;
+            if(velocity >= 0){
+                velocity -= acceleration*6;
+            }
+            else{
+                velocity -= acceleration;
+            }
         }
     }
-    if (keystates['s'])
+    if (keystates[downArrow])
     {
         posz += velocity * cos(pi*angle/180);
         posx += velocity * sin(pi*angle/180);
-        if(velocity < maxSpeed)
+        if(abs(velocity) < maxSpeed)
         {
-            velocity += acceleration;
+            if(velocity <= 0){
+                velocity += acceleration*6;
+            }
+            else{
+                velocity += acceleration;
+            }
         }
     }
 
-    if(velocity > 0 && !keystates['w'] && !keystates['s'])
+    if(!keystates[upArrow] && !keystates[downArrow])
     {
-        posz -= velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-        posx -= velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        velocity -= acceleration * 10;
+        if(velocity > 0){
+            velocity -= acceleration * 2;
+            if(velocity < 0)
+            {
+                velocity = 0;
+            }
+            posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+            posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+        }
+        if(velocity < 0){
+            velocity += acceleration * 2;
+            if(velocity > 0)
+            {
+                velocity = 0;
+            }
+            posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+            posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+        }
     }
 
-    if(velocity < 0)
-    {
-        velocity = 0.000001;
-    }
 
     /*
     //teste de colisão
@@ -416,10 +486,22 @@ void idle()
     */
 
     //angulo para rotacionar
-    if (keystates['a'])
-        angle += 5.0f;
-    if (keystates['d'])
-        angle -= 5.0f;
+    if (keystates[leftArrow]){
+        if(velocity < 0){
+            angle += 0.5f;
+        }
+        if(velocity > 0){
+            angle -= 0.5f;
+        }
+    }
+    if (keystates[rightArrow]){
+        if(velocity < 0){
+            angle -= 0.5f;
+        }
+        if(velocity > 0){
+            angle += 0.5f;
+        }
+    }
 
     if (angle == 360)
         angle = 0;
@@ -515,7 +597,7 @@ void onDisplay()
 
     // car
     glm::mat4 escMao = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
-    glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, 1.5f, posz));
+    glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, posy, posz));
     glm::mat4 fixRot = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
     glm::mat4 rotMao = glm::rotate(mat4(1.0f), angle, vec3(0, 1.0f, 0));
     MVP        = Projection * View * Model * transMao * escMao * rotMao * fixRot;
@@ -577,6 +659,8 @@ int main(int argc, char* argv[])
         glutIgnoreKeyRepeat(1);
         glutKeyboardFunc(keyboardDown);
         glutKeyboardUpFunc(keyboardUp);
+        glutSpecialFunc(specialKeyboardDown);
+        glutSpecialUpFunc(specialKeyboardUp);
         glutIdleFunc(idle);
 
         glutMainLoop();
