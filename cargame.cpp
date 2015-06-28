@@ -280,40 +280,6 @@ int init_resources()
     bool res4 = loadOBJ("objects/checkpoint.obj", checkVertices, checkUV, checkNormals);
     bool res5 = loadOBJ("objects/finish.obj", finishVertices, finishUV, finishNormals);
 
-    // Make a cube out of triangles (two triangles per side)
-    printf("%d\t%d\t%d\n", handVertices.size(), handUV.size(), handNormals.size());
-    tamanho = 3 * handVertices.size() + 2 * handUV.size() + 3 * handNormals.size();
-    GLfloat vertexData[tamanho];
-
-    for (int i = 0; i < handVertices.size(); i++) {
-
-        vertexData[i*8] = handVertices[i][0];
-        vertexData[(i*8)+1] = handVertices[i][1];
-        vertexData[(i*8)+2] = handVertices[i][2];
-
-        vertexData[(i*8)+3] = handUV[i][0];
-        vertexData[(i*8)+4] = handUV[i][1];
-
-        vertexData[(i*8)+5] = handNormals[i][0];
-        vertexData[(i*8)+6] = handNormals[i][1];
-        vertexData[(i*8)+7] = handNormals[i][2];
-
-    }
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-
-    // connect the xyz to the "vert" attribute of the vertex shader
-    glEnableVertexAttribArray(glGetAttribLocation(programID, "vert"));
-    glVertexAttribPointer(glGetAttribLocation(programID, "vert"), 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (const GLvoid*)(0 * sizeof(GLfloat)));
-
-    // connect the uv coords to the "vertTexCoord" attribute of the vertex shader
-    glEnableVertexAttribArray(glGetAttribLocation(programID, "vertTexCoord"));
-    glVertexAttribPointer(glGetAttribLocation(programID, "vertTexCoord"), 2, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(3 * sizeof(GLfloat)));
-
-    // connect the normal to the "vertNormal" attribute of the vertex shader
-    glEnableVertexAttribArray(glGetAttribLocation(programID, "vertNormal"));
-    glVertexAttribPointer(glGetAttribLocation(programID, "vertNormal"), 3, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(5 * sizeof(GLfloat)));
-
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
     glBindVertexArray(vertexID);
@@ -333,8 +299,7 @@ int init_resources()
     gLight.position = vec3(105.0f, 5.0f, 125.0f);
     gLight.intensities = vec3(1.0f, 1.0f, 1.0f);
 
-    //programID = LoadShaders( "vertexshader.vs", "fragmentshader.fs" );
-    programID = LoadShaders( "vertex-shader.txt", "fragment-shader.txt" );
+    programID = LoadShaders( "TransformVertexShader.vertexshader", "TextureFragmentShader.fragmentshader" );
     matrixID = glGetUniformLocation(programID, "MVP");
     modelID = glGetUniformLocation(programID, "model");
 
@@ -1007,27 +972,9 @@ void onDisplay()
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer5, 1, uvBuffer5, textureID5, 4, finishVertices.size());
 
-    /**passa os parametros para a glsl***************************************************************************/
-
-    glUniform1ui(glGetAttribLocation(programID, "tex"), 0);
-
-    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    glUniformMatrix4fv(modelID, 1, GL_FALSE, &Model[0][0]);
-
-    //iluminacao
-    glUniform3fv(glGetUniformLocation(programID, "light_position"), 1, glm::value_ptr(gLight.position));
-    glUniform3fv(glGetUniformLocation(programID, "light_intensities"), 1, glm::value_ptr(gLight.intensities));
-
-    glUniform3fv(glGetUniformLocation(programID, "camera_position"), 1, glm::value_ptr(current_camera_pos));
-
-    glUniform1f(glGetUniformLocation(programID, "ambientShininess"), (ambientShininess));
-
     //disable
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
-
-    //bind VAO and draw
-    glDrawArrays(GL_TRIANGLES, 0, tamanho );
 
     glutSwapBuffers();
     glutPostRedisplay();
