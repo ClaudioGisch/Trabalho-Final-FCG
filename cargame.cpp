@@ -16,7 +16,9 @@
 // Include GLM
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "audiere-1.9.4-win32/include/audiere.h";
 using namespace glm;
+using namespace audiere;
 
 #include "common/shader.cpp"
 #include "common/texture.cpp"
@@ -55,6 +57,17 @@ GLuint textureID3;
 std::vector<glm::vec3> areiaVertices;
 std::vector<glm::vec2> areiaUV;
 std::vector<glm::vec3> areiaNormals;
+
+/** Sound */
+
+// background music
+string background = "happyrock.mp3";
+string cardrive = "carrun.mp3";
+string gravel = "gravel.mp3";
+AudioDevicePtr device(OpenDevice());
+OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
+OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
+OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 
 
 //player position
@@ -104,20 +117,10 @@ void getObjectSphereCollider(sphereCollider *collider, int x, int z, int radius)
 
 bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2)
 {
-
     double distance_x = sphere2.x - sphere1.x;
     double distance_z = sphere2.z - sphere1.z;
     double distance = sqrt(distance_x*distance_x + distance_z*distance_z);
     double sum_radius = sphere1.radius + sphere2.radius;
-    //printf("Sphere 1 x: %.2f\n", sphere1.x);
-    //printf("Sphere 1 z: %.2f\n", sphere1.z);
-    //printf("Sphere 2 x: %.2f\n", sphere2.x);
-    //printf("Sphere 2 z: %.2f\n", sphere2.z);
-    //printf("Sqrt: %.2f\n", sqrt(1.0 + 9.0));
-    //printf("Distance x: %.2f\n", distance_x);
-    //printf("Distance z: %.2f\n", distance_z);
-    //printf(" Distance: %.2f\n",distance);
-    //printf(" Sum Radius: %.2f\n",sum_radius);
 
     return sum_radius > distance;
 }
@@ -305,9 +308,18 @@ void calculateFPS()
     }
 }
 
+bool playingGravel = false;
+
+void playGravel(){
+    if( playingGravel == false){
+            playingGravel = true;
+        sound3->play();
+        sound3->setVolume(1.0f);
+    }
+}
+
 void idle()
 {
-
     float mindis = 10000;
     glm::vec2 car_pos;
     car_pos.x = posx;
@@ -339,10 +351,23 @@ void idle()
     {
         printf(" Voce esta na areia!\n");
         velocity -= acceleration/2;
+
+        // gravel sound
+        if(velocity>=0.05){
+            sound3->play();
+            sound3->setVolume(velocity/1.2);
+        }
     }
     else
     {
+        sound3->stop();
         printf(" Voce esta na pista!\n");
+    }
+
+    // engine
+    sound2->play();
+    if(velocity>=0.05){
+        sound2->setVolume(velocity*3);
     }
 
 
@@ -533,6 +558,10 @@ int main(int argc, char* argv[])
     glutInitWindowSize(800, 600);
     glutCreateWindow("FPS Game");
 
+    sound->play();
+    sound->setRepeat(true);
+    sound->setVolume(0.1f);
+
     GLenum glew_status = glewInit();
     if (glew_status != GLEW_OK)
     {
@@ -551,6 +580,8 @@ int main(int argc, char* argv[])
         glutIdleFunc(idle);
 
         glutMainLoop();
+
+
 
     }
 
