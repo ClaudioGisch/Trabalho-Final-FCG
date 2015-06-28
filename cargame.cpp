@@ -14,11 +14,12 @@
 #include "GL/glew.h"
 #include "GL/freeglut.h"
 
-
 // Include GLM
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
-#include "audiere-1.9.4-win32/include/audiere.h";
+#include "audiere-1.9.4-win32/include/audiere.h"
+#include "glm/gtc/type_ptr.hpp"
+
 using namespace glm;
 using namespace audiere;
 
@@ -32,6 +33,7 @@ bool keystates[256];
 
 GLuint programID;
 GLuint matrixID;        // Get a handle for our "MVP" uniform
+GLuint modelID;
 
 //road
 GLuint vertexID;
@@ -87,6 +89,18 @@ OutputStreamPtr playList[] = {sound, track1, track2, track3, track4, track5};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 
+/** Light */
+
+struct Light {
+    glm::vec3 position;
+    glm::vec3 intensities; //a.k.a. the color of the light
+};
+
+Light gLight;
+GLfloat ambientShininess = 0.5;
+
+/** ----------- */
+
 //fps
 float game_fps = 60;
 
@@ -94,7 +108,7 @@ float game_fps = 60;
 double posx = 1;
 double posz = 1;
 double posy = 1.5f;
-float angle = 180;
+float car_angle = 180;
 float camAngle = 0;
 float pauseCamAngle = 0;
 int upArrow = 0;
@@ -107,6 +121,19 @@ int slowFactorAreia = 5;
 double acceleration = 0.005;
 double maxSpeed = 1.0;
 bool drift = false;
+
+//camera
+glm::vec3 current_camera_pos;
+glm::vec3 current_camera_look;
+
+float change_camera_delay = 0.5;
+float current_camera_delay = 0.5;
+
+// normal camera +
+std::vector<glm::vec3> camera_pos = {vec3(3, 4, 3), vec3(0.1, 1.6, 0.1), vec3(3, 2, 3)};
+std::vector<glm::vec3> camera_look = {vec3(2, 1, 2), vec3(2, 1, 2),  vec3(2, 1, 2)};
+
+int camera_index=0;
 
 // terrain info
 std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
@@ -204,6 +231,8 @@ void loadTexture(unsigned int width, unsigned int height, const unsigned char * 
     );
 }
 
+int tamanho;
+
 int init_resources()
 {
     int i;
@@ -212,13 +241,50 @@ int init_resources()
         keystates[i] = false;
     }
 
-    glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
+    glClearColor(0.4f, 0.4f, 0.4f, 0.0f);
     glEnable(GL_DEPTH_TEST);
 
     //load objects
     bool res = loadOBJ("objects/pista.obj", vertices, uvs, normals);
     bool res2 = loadOBJ("objects/car4.obj", handVertices, handUV, handNormals);
     bool res3 = loadOBJ("objects/areia.obj", areiaVertices, areiaUV, areiaNormals);
+
+    // Make a cube out of triangles (two triangles per side)
+    printf("%d\t%d\t%d\n", vertices.size(), uvs.size(), normals.size());
+    tamanho = 3 * vertices.size() + 2 * uvs.size() + 3 * normals.size();
+    GLfloat vertexData[tamanho];
+
+    for (int i = 0; i < vertices.size(); i++) {
+
+        vertexData[i*8] = vertices[i][0];
+        vertexData[(i*8)+1] = vertices[i][1];
+        vertexData[(i*8)+2] = vertices[i][2];
+
+        vertexData[(i*8)+3] = uvs[i][0];
+        vertexData[(i*8)+4] = uvs[i][1];
+
+        vertexData[(i*8)+5] = normals[i][0];
+        vertexData[(i*8)+6] = normals[i][1];
+        vertexData[(i*8)+7] = normals[i][2];
+
+    }
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
+
+    // connect the xyz to the "vert" attribute of the vertex shader
+    glEnableVertexAttribArray(glGetAttribLocation(programID, "vert"));
+    glVertexAttribPointer(glGetAttribLocation(programID, "vert"), 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (const GLvoid*)(0 * sizeof(GLfloat)));
+
+    // connect the uv coords to the "vertTexCoord" attribute of the vertex shader
+    glEnableVertexAttribArray(glGetAttribLocation(programID, "vertTexCoord"));
+    glVertexAttribPointer(glGetAttribLocation(programID, "vertTexCoord"), 2, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(3 * sizeof(GLfloat)));
+
+    // connect the normal to the "vertNormal" attribute of the vertex shader
+    glEnableVertexAttribArray(glGetAttribLocation(programID, "vertNormal"));
+    glVertexAttribPointer(glGetAttribLocation(programID, "vertNormal"), 3, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(5 * sizeof(GLfloat)));
+
+    // unbind the VAO
+    glBindVertexArray(0);
 
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
@@ -230,9 +296,17 @@ int init_resources()
     glGenVertexArrays(1, &vertexID3);
     glBindVertexArray(vertexID3);
 
+    gLight.position = vec3(105.0f, 5.0f, 95.0f);
+    gLight.intensities = vec3(1.0f, 1.0f, 1.0f);
+
+
+
     //programID = LoadShaders( "vertexshader.vs", "fragmentshader.fs" );
-    programID = LoadShaders( "TransformVertexShader.vertexshader", "TextureFragmentShader.fragmentshader" );
+    programID = LoadShaders( "vertex-shader.txt", "fragment-shader.txt" );
     matrixID = glGetUniformLocation(programID, "MVP");
+    modelID = glGetUniformLocation(programID, "model");
+
+    glClearColor(0.4f, 0.4f, 0.4f, 0.0f);
 
     /**loading textures */
 
@@ -282,15 +356,6 @@ int init_resources()
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer3);
     glBufferData(GL_ARRAY_BUFFER, areiaUV.size() * sizeof(glm::vec2), &areiaUV[0], GL_STATIC_DRAW);
 
-    /*
-    printf("Number of vertices: %d\n",vertices.size());
-    for(int i = 0; i < vertices.size(); i++){
-
-        //printf("(%d: %.2f, %.2f, %.2f)\n",i,areiaVertices[i].x,areiaVertices[i].y,areiaVertices[i].z);
-        printf("(%.2f, %.2f)\n",vertices[i].x,vertices[i].z);
-    }
-    */
-
     return programID;
 
 }
@@ -298,15 +363,19 @@ int init_resources()
 
 void keyboardDown(unsigned char key, int x, int y)
 {
-    if(key != 'p'){
-      keystates[key] = true;
+    if(key != 'p')
+    {
+        keystates[key] = true;
     }
-    else{
-        if(keystates[key]){
+    else
+    {
+        if(keystates[key])
+        {
             keystates[key] = false;
             camAngle = pauseCamAngle;
         }
-        else{
+        else
+        {
             keystates[key] = true;
             pauseCamAngle = camAngle;
         }
@@ -315,46 +384,60 @@ void keyboardDown(unsigned char key, int x, int y)
 
 void keyboardUp(unsigned char key, int x, int y)
 {
-    if(key != 'p'){
-      keystates[key] = false;
-      if(key == 's'){
-        camAngle = 0;
-      }
+    if(key != 'p')
+    {
+        keystates[key] = false;
+        if(key == 's')
+        {
+            camAngle = 0;
+        }
     }
-    if(key == 'u' || key == 'i'){
+    if(key == 'u' || key == 'i')
+    {
         changingMusic = false;
     }
-    if(key == 'j' || key == 'k'){
+    if(key == 'j' || key == 'k')
+    {
         changingVolume = false;
     }
 }
 
-void specialKeyboardDown(int key, int x, int y){
-    if(key == GLUT_KEY_UP){
+void specialKeyboardDown(int key, int x, int y)
+{
+    if(key == GLUT_KEY_UP)
+    {
         keystates[upArrow] = true;
     }
-    if(key == GLUT_KEY_DOWN){
+    if(key == GLUT_KEY_DOWN)
+    {
         keystates[downArrow] = true;
     }
-    if(key == GLUT_KEY_RIGHT){
+    if(key == GLUT_KEY_RIGHT)
+    {
         keystates[rightArrow] = true;
     }
-    if(key == GLUT_KEY_LEFT){
+    if(key == GLUT_KEY_LEFT)
+    {
         keystates[leftArrow] = true;
     }
 }
 
-void specialKeyboardUp(int key, int x, int y){
-    if(key == GLUT_KEY_UP){
+void specialKeyboardUp(int key, int x, int y)
+{
+    if(key == GLUT_KEY_UP)
+    {
         keystates[upArrow] = false;
     }
-    if(key == GLUT_KEY_DOWN){
+    if(key == GLUT_KEY_DOWN)
+    {
         keystates[downArrow] = false;
     }
-    if(key == GLUT_KEY_RIGHT){
+    if(key == GLUT_KEY_RIGHT)
+    {
         keystates[rightArrow] = false;
     }
-    if(key == GLUT_KEY_LEFT){
+    if(key == GLUT_KEY_LEFT)
+    {
         keystates[leftArrow] = false;
     }
 }
@@ -409,44 +492,54 @@ void idle()
 
     gettimeofday(&start_timer, NULL);
 
-    if(!(playList[currentMusic]->isPlaying())){
+    if(!(playList[currentMusic]->isPlaying()))
+    {
         playList[currentMusic]->play();
         playList[currentMusic]->setVolume(volume);
     }
-    if(keystates['j'] && !changingVolume){
-        if(volume > 0.02f){
+    if(keystates['j'] && !changingVolume)
+    {
+        if(volume > 0.02f)
+        {
             changingVolume = true;
             volume -= 0.02;
             playList[currentMusic]->setVolume(volume);
         }
     }
-    if(keystates['k'] && !changingVolume){
-        if(volume < 1.0f){
+    if(keystates['k'] && !changingVolume)
+    {
+        if(volume < 1.0f)
+        {
             changingVolume = true;
             volume += 0.02;
             playList[currentMusic]->setVolume(volume);
         }
     }
-    if(keystates['u'] && !changingMusic){
+    if(keystates['u'] && !changingMusic)
+    {
         changingMusic = true;
         playList[currentMusic]->stop();
         playList[currentMusic]->reset();
         currentMusic -= 1;
-        if(currentMusic <0){
+        if(currentMusic <0)
+        {
             currentMusic = playListSize-1;
         }
     }
-    if(keystates['i'] && !changingMusic){
+    if(keystates['i'] && !changingMusic)
+    {
         changingMusic = true;
         playList[currentMusic]->stop();
         playList[currentMusic]->reset();
         currentMusic += 1;
-        if(currentMusic >= playListSize){
+        if(currentMusic >= playListSize)
+        {
             currentMusic = 0;
         }
     }
 
-    if(!keystates['p']){
+    if(!keystates['p'])
+    {
 
         float mindis = 10000;
         glm::vec2 car_pos;
@@ -478,24 +571,29 @@ void idle()
         if(mindis > 8)
         {
             printf(" Voce esta na areia!\n");
-            if (abs(velocity) > maxSpeed/slowFactorAreia){
+            if (abs(velocity) > maxSpeed/slowFactorAreia)
+            {
                 if (velocity > 0)
                 {
                     velocity -= acceleration * 10;
                 }
-                else{
+                else
+                {
                     velocity += acceleration * 10;
                 }
             }
-            if(velocity != 0){
-                if(posy > 1.5){
+            if(velocity != 0)
+            {
+                if(posy > 1.5)
+                {
                     posy -= 0.03;
                 }
-                else{
+                else
+                {
                     posy += 0.015;
                 }
             }
-                    // gravel sound
+            // gravel sound
             sound3->play();
             sound3->setVolume(abs(velocity*0.5));
         }
@@ -516,28 +614,32 @@ void idle()
         //andar para frente ou para tras
         if (keystates[upArrow])     //-9 < z|x < 9
         {
-            posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-            posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+            posz += velocity * cos(pi*car_angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+            posx += velocity * sin(pi*car_angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
             if(abs(velocity) < maxSpeed)
             {
-                if(velocity >= 0){
+                if(velocity >= 0)
+                {
                     velocity -= acceleration*6;
                 }
-                else{
+                else
+                {
                     velocity -= acceleration;
                 }
             }
         }
         if (keystates[downArrow])
         {
-            posz += velocity * cos(pi*angle/180);
-            posx += velocity * sin(pi*angle/180);
+            posz += velocity * cos(pi*car_angle/180);
+            posx += velocity * sin(pi*car_angle/180);
             if(abs(velocity) < maxSpeed)
             {
-                if(velocity <= 0){
+                if(velocity <= 0)
+                {
                     velocity += acceleration*6;
                 }
-                else{
+                else
+                {
                     velocity += acceleration;
                 }
             }
@@ -545,110 +647,169 @@ void idle()
 
         if(!keystates[upArrow] && !keystates[downArrow])
         {
-            if(velocity > 0){
+            if(velocity > 0)
+            {
                 velocity -= acceleration * 2;
                 if(velocity < 0)
                 {
                     velocity = 0;
                 }
-                posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-                posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+                posz += velocity * cos(pi*car_angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+                posx += velocity * sin(pi*car_angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
             }
-            if(velocity < 0){
+            if(velocity < 0)
+            {
                 velocity += acceleration * 2;
                 if(velocity > 0)
                 {
                     velocity = 0;
                 }
-                posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-                posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+                posz += velocity * cos(pi*car_angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+                posx += velocity * sin(pi*car_angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
             }
         }
 
         //angulo para rotacionar
-        if (keystates[leftArrow]){
+        if (keystates[leftArrow])
+        {
             drift = true;
-            if(velocity < 0){
-                angle += turning_speed;
-                if(camAngle <= 20 || camAngle > 350){
+            if(velocity < 0)
+            {
+                car_angle += turning_speed;
+                if(camAngle <= 20 || camAngle > 350)
+                {
                     camAngle -= turning_speed;
                 }
             }
-            if(velocity > 0){
-                angle -= turning_speed;
-                if(camAngle < 10 || camAngle > 340){
+            if(velocity > 0)
+            {
+                car_angle -= turning_speed;
+                if(camAngle < 10 || camAngle > 340)
+                {
                     camAngle += turning_speed;
                 }
             }
         }
-        if (keystates[rightArrow]){
+        if (keystates[rightArrow])
+        {
             drift = true;
-            if(velocity < 0){
-                angle -= turning_speed;
-                if(camAngle < 10 || camAngle > 340){
+            if(velocity < 0)
+            {
+                car_angle -= turning_speed;
+                if(camAngle < 10 || camAngle > 340)
+                {
                     camAngle += turning_speed;
                 }
             }
-            if(velocity > 0){
-                angle += turning_speed;
-                if(camAngle <= 20 || camAngle > 350){
+            if(velocity > 0)
+            {
+                car_angle += turning_speed;
+                if(camAngle <= 20 || camAngle > 350)
+                {
                     camAngle -= turning_speed;
                 }
             }
         }
-        if(keystates['w']){
+        if(keystates['w'])
+        {
             camAngle = 0;
         }
-        if(keystates['s']){
+        if(keystates['s'])
+        {
             camAngle = 180;
         }
-        if(drift && !keystates[rightArrow] && !keystates[leftArrow]){
-            if(camAngle > 340 && camAngle < 360){
+        if(drift && !keystates[rightArrow] && !keystates[leftArrow])
+        {
+            if(camAngle > 340 && camAngle < 360)
+            {
                 camAngle += turning_speed;
-                if(camAngle >= 360){
+                if(camAngle >= 360)
+                {
                     drift = false;
                     camAngle = 0;
                 }
             }
-            if(camAngle > 0 && camAngle < 20){
+            if(camAngle > 0 && camAngle < 20)
+            {
                 camAngle -= turning_speed;
-                if(camAngle <= 0){
+                if(camAngle <= 0)
+                {
                     drift = false;
                     camAngle = 0;
                 }
             }
         }
 
-        if (angle >= 360)
-            angle = angle - 360;
-        if (angle < 0)
-            angle = 360 + angle;
+        if (car_angle >= 360)
+            car_angle = car_angle - 360;
+        if (car_angle < 0)
+            car_angle = 360 + car_angle;
         if (camAngle >= 360)
             camAngle = camAngle - 360;
         if (camAngle < 0)
             camAngle = 360 + camAngle;
 
-        printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
+        // camera
+        if(current_camera_delay > 0){
+            current_camera_delay -= 0.05;
+        }
+        else{
+            current_camera_delay = 0;
+        }
+
+        if(keystates['v'])
+        {
+            if(current_camera_delay <= 0)
+            {
+                camera_index++;
+
+                if(camera_index == camera_pos.size())
+                {
+                    camera_index = 0;
+                }
+
+                current_camera_pos = camera_pos[camera_index];
+                current_camera_look = camera_look[camera_index];
+
+                current_camera_delay = change_camera_delay;
+            }
+
+        }
+
+        printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, car_angle, posx, 0.0, posz, velocity);
 
         glutPostRedisplay();
 
         calculateFPS();
     }
-    else{
+    else
+    {
         sound2->stop();
         sound3->stop();
-        if(keystates['q']){
+        if(keystates['q'])
+        {
             camAngle += 0.5f;
         }
-        if(keystates['e']){
+        if(keystates['e'])
+        {
             camAngle -= 0.5f;
         }
-        if(keystates['w']){
+        if(keystates['w'])
+        {
             camAngle = 0;
         }
-        if(keystates['s']){
+        if(keystates['s'])
+        {
             camAngle = 180;
         }
+    }
+
+    if(keystates['3']){
+        ambientShininess += 0.05;
+    }
+
+    if(keystates['4']){
+        ambientShininess -= 0.05;
     }
 
     gettimeofday(&end_timer, NULL);
@@ -658,7 +819,8 @@ void idle()
 
     mtime = ((seconds) * 1000 + useconds/1000.0) + 0.5;
 
-    while(mtime < 1000.0f/game_fps){
+    while(mtime < 1000.0f/game_fps)
+    {
         gettimeofday(&end_timer, NULL);
 
         seconds  = end_timer.tv_sec  - start_timer.tv_sec;
@@ -719,25 +881,14 @@ void onDisplay()
 
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    glBegin(GL_QUADS);
-    glColor3d(1,0,0);
-    glVertex3f(-1,-1,-10);
-    glColor3d(1,1,0);
-    glVertex3f(1,-1,-10);
-    glColor3d(1,1,1);
-    glVertex3f(1,1,-10);
-    glColor3d(0,1,1);
-    glVertex3f(-1,1,-10);
-    glEnd();
-
     glUseProgram(programID);
 
     glm::mat4 Projection = glm::perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f);
 
     glm::mat4 View       = glm::lookAt(
 
-                               glm::vec3(posx-3*cos(pi*(-90-angle-camAngle)/180), 4, posz-3*sin(pi*(-90-angle-camAngle)/180)),
-                               glm::vec3(posx+2.8*cos(pi*(-90-angle-camAngle)/180), 1, posz+2.8*sin(pi*(-90-angle-camAngle)/180)),
+                               glm::vec3(posx-(current_camera_pos.x)*cos(pi*(-90-car_angle-camAngle)/180), (current_camera_pos.y), posz-(current_camera_pos.z)*sin(pi*(-90-car_angle-camAngle)/180)),
+                               glm::vec3(posx+(current_camera_look.x)*cos(pi*(-90-car_angle-camAngle)/180), (current_camera_look.y), posz+(current_camera_look.z)*sin(pi*(-90-car_angle-camAngle)/180)),
 
                                glm::vec3(0,1,0)
                            );
@@ -758,7 +909,7 @@ void onDisplay()
     glm::mat4 escMao = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
     glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, posy, posz));
     glm::mat4 fixRot = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
-    glm::mat4 rotMao = glm::rotate(mat4(1.0f), angle, vec3(0, 1.0f, 0));
+    glm::mat4 rotMao = glm::rotate(mat4(1.0f), car_angle, vec3(0, 1.0f, 0));
     MVP        = Projection * View * Model * transMao * escMao * rotMao * fixRot;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID2, 1, handVertices.size());
@@ -769,9 +920,27 @@ void onDisplay()
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID3, 2, areiaVertices.size());
 
+    /**passa os parametros para a glsl***************************************************************************/
+
+    glUniform1ui(glGetAttribLocation(programID, "tex"), 0);
+
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    glUniformMatrix4fv(modelID, 1, GL_FALSE, &Model[0][0]);
+
+    //iluminacao
+    glUniform3fv(glGetUniformLocation(programID, "light_position"), 1, glm::value_ptr(gLight.position));
+    glUniform3fv(glGetUniformLocation(programID, "light_intensities"), 1, glm::value_ptr(gLight.intensities));
+
+    glUniform3fv(glGetUniformLocation(programID, "camera_position"), 1, glm::value_ptr(current_camera_pos));
+
+    glUniform1f(glGetUniformLocation(programID, "ambientShininess"), (ambientShininess));
+
     //disable
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+
+    //bind VAO and draw
+    glDrawArrays(GL_TRIANGLES, 0, tamanho );
 
     glutSwapBuffers();
     glutPostRedisplay();
@@ -799,6 +968,10 @@ int main(int argc, char* argv[])
     glutInitWindowSize(800, 600);
     glutCreateWindow("Super Speed Runners");
 
+    current_camera_pos = camera_pos[0];
+    current_camera_look = camera_look[0];
+    camera_index = 0;
+
     GLenum glew_status = glewInit();
     if (glew_status != GLEW_OK)
     {
@@ -808,7 +981,6 @@ int main(int argc, char* argv[])
 
     if (init_resources() != 0)
     {
-
         glutDisplayFunc(onDisplay);
 
         glutIgnoreKeyRepeat(1);
@@ -819,8 +991,6 @@ int main(int argc, char* argv[])
         glutIdleFunc(idle);
 
         glutMainLoop();
-
-
 
     }
 
