@@ -97,7 +97,7 @@ struct Light {
 };
 
 Light gLight;
-GLfloat ambientShininess = 0.5;
+GLfloat ambientShininess = 0.30;
 
 /** ----------- */
 
@@ -296,10 +296,8 @@ int init_resources()
     glGenVertexArrays(1, &vertexID3);
     glBindVertexArray(vertexID3);
 
-    gLight.position = vec3(105.0f, 5.0f, 95.0f);
+    gLight.position = vec3(105.0f, 5.0f, 125.0f);
     gLight.intensities = vec3(1.0f, 1.0f, 1.0f);
-
-
 
     //programID = LoadShaders( "vertexshader.vs", "fragmentshader.fs" );
     programID = LoadShaders( "vertex-shader.txt", "fragment-shader.txt" );
@@ -802,14 +800,6 @@ void idle()
         {
             camAngle = 180;
         }
-    }
-
-    if(keystates['3']){
-        ambientShininess += 0.05;
-    }
-
-    if(keystates['4']){
-        ambientShininess -= 0.05;
     }
 
     gettimeofday(&end_timer, NULL);
