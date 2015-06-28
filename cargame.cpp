@@ -433,6 +433,7 @@ void idle()
 
         // engine
         sound2->play();
+        sound2->setPitchShift(velocity*5);
         sound2->setVolume(abs(velocity)*4);
 
         //andar para frente ou para tras
