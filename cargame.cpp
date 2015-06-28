@@ -76,6 +76,7 @@ double posx = 1;
 double posz = 1;
 double posy = 1.5f;
 float angle = 180;
+float camAngle = 0;
 int upArrow = 0;
 int downArrow = 1;
 int rightArrow = 2;
@@ -412,25 +413,9 @@ void idle()
             else{
                 posy += 0.015;
             }
-<<<<<<< HEAD
-        }
-        if(posy > 1.5){
-            posy -= 0.03;
-        }
-        else{
-            posy += 0.015;
-        }
-
-        // gravel sound
-        sound3->play();
-        sound3->setVolume(abs(velocity*1.5));
-=======
-
-            // gravel sound
+                    // gravel sound
             sound3->play();
-            sound3->setVolume(abs(velocity));
->>>>>>> b318cedfb612c6f10a6245c21c5f03c9b789c007
-
+            sound3->setVolume(abs(velocity*1.5));
         }
         else
         {
@@ -443,19 +428,8 @@ void idle()
         sound2->play();
         sound2->setVolume(abs(velocity)*4);
 
-
-<<<<<<< HEAD
-    //andar para frente ou para tras
-    if (keystates[upArrow])     //-9 < z|x < 9
-    {
-        posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-        posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        if(abs(velocity) < maxSpeed)
-=======
-
         //andar para frente ou para tras
         if (keystates[upArrow])     //-9 < z|x < 9
->>>>>>> b318cedfb612c6f10a6245c21c5f03c9b789c007
         {
             posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
             posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
@@ -537,11 +511,24 @@ void idle()
                 angle += 0.5f;
             }
         }
+        if(keystates['q']){
+            camAngle += 0.5f;
+        }
+        if(keystates['e']){
+            camAngle -= 0.5f;
+        }
+        if(keystates['2']){
+            camAngle = 0;
+        }
 
         if (angle == 360)
             angle = 0;
         if (angle == -10)
             angle = 350;
+        if (camAngle == 360)
+            camAngle = 0;
+        if (camAngle == -10)
+            camAngle = 350;
 
         printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
 
@@ -617,8 +604,8 @@ void onDisplay()
 
     glm::mat4 View       = glm::lookAt(
 
-                               glm::vec3(posx-3*cos(pi*(-90-angle)/180), 4, posz-3*sin(pi*(-90-angle)/180)),
-                               glm::vec3(posx+2.8*cos(pi*(-90-angle)/180), 1, posz+2.8*sin(pi*(-90-angle)/180)),
+                               glm::vec3(posx-3*cos(pi*(-90-angle-camAngle)/180), 4, posz-3*sin(pi*(-90-angle-camAngle)/180)),
+                               glm::vec3(posx+2.8*cos(pi*(-90-angle-camAngle)/180), 1, posz+2.8*sin(pi*(-90-angle-camAngle)/180)),
 
                                glm::vec3(0,1,0)
                            );
