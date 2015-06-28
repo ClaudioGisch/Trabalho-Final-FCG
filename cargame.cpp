@@ -401,10 +401,9 @@ void idle()
         velocity -= acceleration/2;
 
         // gravel sound
-        if(velocity>=0.05){
-            sound3->play();
-            sound3->setVolume(velocity/1.2);
-        }
+        sound3->play();
+        sound3->setVolume(abs(velocity));
+
     }
     else
     {
@@ -415,9 +414,8 @@ void idle()
 
     // engine
     sound2->play();
-    if(velocity>=0.05){
-        sound2->setVolume(velocity*3);
-    }
+    sound2->setVolume(abs(velocity)*4);
+
 
 
     //andar para frente ou para tras
