@@ -275,12 +275,24 @@ int init_resources()
 
 void keyboardDown(unsigned char key, int x, int y)
 {
-    keystates[key] = true;
+    if(key != 'p'){
+      keystates[key] = true;
+    }
+    else{
+        if(keystates[key]){
+            keystates[key] = false;
+        }
+        else{
+            keystates[key] = true;
+        }
+    }
 }
 
 void keyboardUp(unsigned char key, int x, int y)
 {
-    keystates[key] = false;
+    if(key != 'p'){
+      keystates[key] = false;
+    }
 }
 
 void specialKeyboardDown(int key, int x, int y){
@@ -353,164 +365,171 @@ void playGravel(){
 
 void idle()
 {
-    float mindis = 10000;
-    glm::vec2 car_pos;
-    car_pos.x = posx;
-    car_pos.y = posz;
-    float dis;
-    int j = 0;
-    int i = 0;
+    if(!keystates['p']){
 
-    //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
+        float mindis = 10000;
+        glm::vec2 car_pos;
+        car_pos.x = posx;
+        car_pos.y = posz;
+        float dis;
+        int j = 0;
+        int i = 0;
 
-    for(i = 0; i < pinpoints.size()-1; i++)
-    {
+        //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
 
-        dis = minimum_distance(pinpoints[i], pinpoints[i+1], car_pos);
+        for(i = 0; i < pinpoints.size()-1; i++)
+        {
+
+            dis = minimum_distance(pinpoints[i], pinpoints[i+1], car_pos);
+            if ( dis < mindis)
+            {
+                mindis = dis;
+            }
+        }
+
+        dis = minimum_distance(pinpoints[i], pinpoints[0], car_pos);
         if ( dis < mindis)
         {
             mindis = dis;
         }
-    }
 
-    dis = minimum_distance(pinpoints[i], pinpoints[0], car_pos);
-    if ( dis < mindis)
-    {
-        mindis = dis;
-    }
-
-    printf("\n Distance to middle: %.2f\n",mindis);
-    if(mindis > 8)
-    {
-        printf(" Voce esta na areia!\n");
-        if (abs(velocity) > maxSpeed/slowFactorAreia){
-            if (velocity > 0)
-            {
-                velocity -= acceleration * 10;
+        printf("\n Distance to middle: %.2f\n",mindis);
+        if(mindis > 8)
+        {
+            printf(" Voce esta na areia!\n");
+            if (abs(velocity) > maxSpeed/slowFactorAreia){
+                if (velocity > 0)
+                {
+                    velocity -= acceleration * 10;
+                }
+                else{
+                    velocity += acceleration * 10;
+                }
+            }
+            if(posy > 1.5){
+                posy -= 0.03;
             }
             else{
-                velocity += acceleration * 10;
+                posy += 0.015;
+            }
+
+            // gravel sound
+            sound3->play();
+            sound3->setVolume(abs(velocity));
+
+        }
+        else
+        {
+            sound3->stop();
+            printf(" Voce esta na pista!\n");
+            posy = 1.5f;
+        }
+
+        // engine
+        sound2->play();
+        sound2->setVolume(abs(velocity)*4);
+
+
+
+        //andar para frente ou para tras
+        if (keystates[upArrow])     //-9 < z|x < 9
+        {
+            posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+            posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+            if(abs(velocity) < maxSpeed)
+            {
+                if(velocity >= 0){
+                    velocity -= acceleration*6;
+                }
+                else{
+                    velocity -= acceleration;
+                }
             }
         }
-        if(posy > 1.5){
-            posy -= 0.03;
+        if (keystates[downArrow])
+        {
+            posz += velocity * cos(pi*angle/180);
+            posx += velocity * sin(pi*angle/180);
+            if(abs(velocity) < maxSpeed)
+            {
+                if(velocity <= 0){
+                    velocity += acceleration*6;
+                }
+                else{
+                    velocity += acceleration;
+                }
+            }
         }
-        else{
-            posy += 0.015;
+
+        if(!keystates[upArrow] && !keystates[downArrow])
+        {
+            if(velocity > 0){
+                velocity -= acceleration * 2;
+                if(velocity < 0)
+                {
+                    velocity = 0;
+                }
+                posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+                posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+            }
+            if(velocity < 0){
+                velocity += acceleration * 2;
+                if(velocity > 0)
+                {
+                    velocity = 0;
+                }
+                posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
+                posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
+            }
         }
-        velocity -= acceleration/2;
 
-        // gravel sound
-        sound3->play();
-        sound3->setVolume(abs(velocity));
 
+        /*
+        //teste de colisão
+        if (posz < -9)
+            posz = -9;
+        if (posz > 9)
+            posz = 9;
+        if (posx < -9)
+            posx = -9;
+        if (posx > 9)
+            posx = 9;
+        */
+
+        //angulo para rotacionar
+        if (keystates[leftArrow]){
+            if(velocity < 0){
+                angle += 0.5f;
+            }
+            if(velocity > 0){
+                angle -= 0.5f;
+            }
+        }
+        if (keystates[rightArrow]){
+            if(velocity < 0){
+
+                angle -= 0.5f;
+            }
+            if(velocity > 0){
+                angle += 0.5f;
+            }
+        }
+
+        if (angle == 360)
+            angle = 0;
+        if (angle == -10)
+            angle = 350;
+
+        printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
+
+        glutPostRedisplay();
+
+        calculateFPS();
     }
-    else
-    {
+    else{
+        sound2->stop();
         sound3->stop();
-        printf(" Voce esta na pista!\n");
-        posy = 1.5f;
     }
-
-    // engine
-    sound2->play();
-    sound2->setVolume(abs(velocity)*4);
-
-
-
-    //andar para frente ou para tras
-    if (keystates[upArrow])     //-9 < z|x < 9
-    {
-        posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-        posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        if(abs(velocity) < maxSpeed)
-        {
-            if(velocity >= 0){
-                velocity -= acceleration*6;
-            }
-            else{
-                velocity -= acceleration;
-            }
-        }
-    }
-    if (keystates[downArrow])
-    {
-        posz += velocity * cos(pi*angle/180);
-        posx += velocity * sin(pi*angle/180);
-        if(abs(velocity) < maxSpeed)
-        {
-            if(velocity <= 0){
-                velocity += acceleration*6;
-            }
-            else{
-                velocity += acceleration;
-            }
-        }
-    }
-
-    if(!keystates[upArrow] && !keystates[downArrow])
-    {
-        if(velocity > 0){
-            velocity -= acceleration * 2;
-            if(velocity < 0)
-            {
-                velocity = 0;
-            }
-            posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-            posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        }
-        if(velocity < 0){
-            velocity += acceleration * 2;
-            if(velocity > 0)
-            {
-                velocity = 0;
-            }
-            posz += velocity * cos(pi*angle/180);   //cos() e sin() usam radianos, então deve-se multiplicar o
-            posx += velocity * sin(pi*angle/180);   //angulo por pi e dividir por 180 para ter o valor certo
-        }
-    }
-
-
-    /*
-    //teste de colisão
-    if (posz < -9)
-        posz = -9;
-    if (posz > 9)
-        posz = 9;
-    if (posx < -9)
-        posx = -9;
-    if (posx > 9)
-        posx = 9;
-    */
-
-    //angulo para rotacionar
-    if (keystates[leftArrow]){
-        if(velocity < 0){
-            angle += 0.5f;
-        }
-        if(velocity > 0){
-            angle -= 0.5f;
-        }
-    }
-    if (keystates[rightArrow]){
-        if(velocity < 0){
-            angle -= 0.5f;
-        }
-        if(velocity > 0){
-            angle += 0.5f;
-        }
-    }
-
-    if (angle == 360)
-        angle = 0;
-    if (angle == -10)
-        angle = 350;
-
-    printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, angle, posx, 0.0, posz, velocity);
-
-    glutPostRedisplay();
-
-    calculateFPS();
 }
 
 //draw method
