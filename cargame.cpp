@@ -77,6 +77,7 @@ double posz = 1;
 double posy = 1.5f;
 float angle = 180;
 float camAngle = 0;
+float pauseCamAngle = 0;
 int upArrow = 0;
 int downArrow = 1;
 int rightArrow = 2;
@@ -283,9 +284,11 @@ void keyboardDown(unsigned char key, int x, int y)
     else{
         if(keystates[key]){
             keystates[key] = false;
+            camAngle = pauseCamAngle;
         }
         else{
             keystates[key] = true;
+            pauseCamAngle = camAngle;
         }
     }
 }
@@ -294,6 +297,9 @@ void keyboardUp(unsigned char key, int x, int y)
 {
     if(key != 'p'){
       keystates[key] = false;
+      if(key == 's'){
+        camAngle = 0;
+      }
     }
 }
 
@@ -526,12 +532,6 @@ void idle()
                 }
             }
         }
-        if(keystates['q']){
-            camAngle += 0.5f;
-        }
-        if(keystates['e']){
-            camAngle -= 0.5f;
-        }
         if(keystates['w']){
             camAngle = 0;
         }
@@ -577,6 +577,18 @@ void idle()
     else{
         sound2->stop();
         sound3->stop();
+        if(keystates['q']){
+            camAngle += 0.5f;
+        }
+        if(keystates['e']){
+            camAngle -= 0.5f;
+        }
+        if(keystates['w']){
+            camAngle = 0;
+        }
+        if(keystates['s']){
+            camAngle = 180;
+        }
     }
 }
 
