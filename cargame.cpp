@@ -62,6 +62,28 @@ std::vector<glm::vec3> areiaVertices;
 std::vector<glm::vec2> areiaUV;
 std::vector<glm::vec3> areiaNormals;
 
+//checkpoint
+GLuint vertexID4;
+GLuint vertexBuffer4;
+GLuint uvBuffer4;
+GLuint textureID4;
+std::vector<glm::vec3> checkVertices;
+std::vector<glm::vec2> checkUV;
+std::vector<glm::vec3> checkNormals;
+
+//finish line
+GLuint vertexID5;
+GLuint vertexBuffer5;
+GLuint uvBuffer5;
+GLuint textureID5;
+std::vector<glm::vec3> finishVertices;
+std::vector<glm::vec2> finishUV;
+std::vector<glm::vec3> finishNormals;
+
+/** Globals */
+
+int number_of_laps = 0;
+
 /** Sound */
 
 // background music
@@ -104,10 +126,11 @@ GLfloat ambientShininess = 0.30;
 //fps
 float game_fps = 60;
 
-//player position
+/** player position */
 double posx = 1;
 double posz = 1;
 double posy = 1.5f;
+double car_radius = 1;
 float car_angle = 180;
 float camAngle = 0;
 float pauseCamAngle = 0;
@@ -122,7 +145,7 @@ double acceleration = 0.005;
 double maxSpeed = 1.0;
 bool drift = false;
 
-//camera
+/** camera */
 glm::vec3 current_camera_pos;
 glm::vec3 current_camera_look;
 
@@ -135,7 +158,13 @@ std::vector<glm::vec3> camera_look = {vec3(2, 1, 2), vec3(2, 1, 2),  vec3(2, 1, 
 
 int camera_index=0;
 
-// terrain info
+/** Checkpoints */
+
+glm::vec2 current_checkpoint_pos;
+double checkpoint_radius = 16;
+int checkpoint_index = 0;
+
+/** terrain info */
 std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
                                     vec2(196.0, 31.0), vec2(196.0, -45.0), vec2(151.0, -45.0), vec2(151.0, -95.0),
                                     vec2(132.0, -95.0), vec2(117.0, -79.0), vec2(43.0, -79.0), vec2(43.0, -45.0),
@@ -248,24 +277,26 @@ int init_resources()
     bool res = loadOBJ("objects/pista.obj", vertices, uvs, normals);
     bool res2 = loadOBJ("objects/car4.obj", handVertices, handUV, handNormals);
     bool res3 = loadOBJ("objects/areia.obj", areiaVertices, areiaUV, areiaNormals);
+    bool res4 = loadOBJ("objects/checkpoint.obj", checkVertices, checkUV, checkNormals);
+    bool res5 = loadOBJ("objects/finish.obj", finishVertices, finishUV, finishNormals);
 
     // Make a cube out of triangles (two triangles per side)
-    printf("%d\t%d\t%d\n", vertices.size(), uvs.size(), normals.size());
-    tamanho = 3 * vertices.size() + 2 * uvs.size() + 3 * normals.size();
+    printf("%d\t%d\t%d\n", handVertices.size(), handUV.size(), handNormals.size());
+    tamanho = 3 * handVertices.size() + 2 * handUV.size() + 3 * handNormals.size();
     GLfloat vertexData[tamanho];
 
-    for (int i = 0; i < vertices.size(); i++) {
+    for (int i = 0; i < handVertices.size(); i++) {
 
-        vertexData[i*8] = vertices[i][0];
-        vertexData[(i*8)+1] = vertices[i][1];
-        vertexData[(i*8)+2] = vertices[i][2];
+        vertexData[i*8] = handVertices[i][0];
+        vertexData[(i*8)+1] = handVertices[i][1];
+        vertexData[(i*8)+2] = handVertices[i][2];
 
-        vertexData[(i*8)+3] = uvs[i][0];
-        vertexData[(i*8)+4] = uvs[i][1];
+        vertexData[(i*8)+3] = handUV[i][0];
+        vertexData[(i*8)+4] = handUV[i][1];
 
-        vertexData[(i*8)+5] = normals[i][0];
-        vertexData[(i*8)+6] = normals[i][1];
-        vertexData[(i*8)+7] = normals[i][2];
+        vertexData[(i*8)+5] = handNormals[i][0];
+        vertexData[(i*8)+6] = handNormals[i][1];
+        vertexData[(i*8)+7] = handNormals[i][2];
 
     }
 
@@ -283,9 +314,6 @@ int init_resources()
     glEnableVertexAttribArray(glGetAttribLocation(programID, "vertNormal"));
     glVertexAttribPointer(glGetAttribLocation(programID, "vertNormal"), 3, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(5 * sizeof(GLfloat)));
 
-    // unbind the VAO
-    glBindVertexArray(0);
-
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
     glBindVertexArray(vertexID);
@@ -295,6 +323,12 @@ int init_resources()
 
     glGenVertexArrays(1, &vertexID3);
     glBindVertexArray(vertexID3);
+
+    glGenVertexArrays(1, &vertexID4);
+    glBindVertexArray(vertexID4);
+
+    glGenVertexArrays(1, &vertexID5);
+    glBindVertexArray(vertexID5);
 
     gLight.position = vec3(105.0f, 5.0f, 125.0f);
     gLight.intensities = vec3(1.0f, 1.0f, 1.0f);
@@ -329,6 +363,20 @@ int init_resources()
 
     textureID3  = loadBMP_custom("textures/sand.bmp");
 
+    //checkpoint texture
+    glActiveTexture(GL_TEXTURE3);
+    glGenTextures(1, &textureID4);
+    glBindTexture(GL_TEXTURE_2D, textureID4);
+
+    textureID4  = loadBMP_custom("textures/checkboard.bmp");
+
+    //checkpoint texture
+    glActiveTexture(GL_TEXTURE4);
+    glGenTextures(1, &textureID5);
+    glBindTexture(GL_TEXTURE_2D, textureID5);
+
+    textureID5  = loadBMP_custom("textures/finish.bmp");
+
 
     /** generate and bind vertices and uvs */
     glGenBuffers(1, &vertexBuffer);
@@ -354,10 +402,24 @@ int init_resources()
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer3);
     glBufferData(GL_ARRAY_BUFFER, areiaUV.size() * sizeof(glm::vec2), &areiaUV[0], GL_STATIC_DRAW);
 
+    glGenBuffers(1, &vertexBuffer4);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer4);
+    glBufferData(GL_ARRAY_BUFFER, checkVertices.size() * sizeof(glm::vec3), &checkVertices[0], GL_STATIC_DRAW);
+
+    glGenBuffers(1, &uvBuffer4);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer4);
+    glBufferData(GL_ARRAY_BUFFER, checkUV.size() * sizeof(glm::vec2), &checkUV[0], GL_STATIC_DRAW);
+
+    glGenBuffers(1, &vertexBuffer5);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer5);
+    glBufferData(GL_ARRAY_BUFFER, finishVertices.size() * sizeof(glm::vec3), &finishVertices[0], GL_STATIC_DRAW);
+
+    glGenBuffers(1, &uvBuffer5);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer5);
+    glBufferData(GL_ARRAY_BUFFER, finishUV.size() * sizeof(glm::vec2), &finishUV[0], GL_STATIC_DRAW);
+
     return programID;
-
 }
-
 
 void keyboardDown(unsigned char key, int x, int y)
 {
@@ -773,12 +835,6 @@ void idle()
             }
 
         }
-
-        printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, car_angle, posx, 0.0, posz, velocity);
-
-        glutPostRedisplay();
-
-        calculateFPS();
     }
     else
     {
@@ -802,6 +858,8 @@ void idle()
         }
     }
 
+    calculateFPS();
+
     gettimeofday(&end_timer, NULL);
 
     seconds  = end_timer.tv_sec  - start_timer.tv_sec;
@@ -824,6 +882,31 @@ void idle()
     print(0.1f, 0.1f, gameName);
 
     printf("Elapsed time: %ld milliseconds\n", mtime);
+
+    printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, car_angle, posx, 0.0, posz, velocity);
+
+    sphereCollider car_collider;
+    sphereCollider checkpoint_collider;
+
+    car_collider.radius = car_radius;
+    car_collider.x = posx;
+    car_collider.z = posz;
+
+    checkpoint_collider.radius = checkpoint_radius;
+    checkpoint_collider.x = current_checkpoint_pos.x;
+    checkpoint_collider.z = current_checkpoint_pos.y;
+
+    bool col = SphereColliderCmp(car_collider, checkpoint_collider);
+
+    if(col){
+        checkpoint_index++;
+        if(checkpoint_index == pinpoints.size()){
+            checkpoint_index = 0;
+        }
+        current_checkpoint_pos = pinpoints[checkpoint_index];
+    }
+
+    glutPostRedisplay();
 }
 
 //draw method
@@ -910,6 +993,20 @@ void onDisplay()
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID3, 2, areiaVertices.size());
 
+    // check
+    glm::mat4 escCheck = glm::scale(mat4(1.0f), vec3(18.0f, 1.0f, 18.0f));
+    glm::mat4 transCheck = glm::translate(mat4(1.0f), vec3(current_checkpoint_pos.x, 1.0f, current_checkpoint_pos.y));
+    MVP        = Projection * View * Model * transCheck * escCheck;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    drawMesh(0, vertexBuffer4, 1, uvBuffer4, textureID4, 3, checkVertices.size());
+
+    // finish
+    glm::mat4 escFinish = glm::scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
+    glm::mat4 transFinish = glm::translate(mat4(1.0f), vec3(1.0f, 1.5f, 1.0f));
+    MVP        = Projection * View * Model;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    drawMesh(0, vertexBuffer5, 1, uvBuffer5, textureID5, 4, finishVertices.size());
+
     /**passa os parametros para a glsl***************************************************************************/
 
     glUniform1ui(glGetAttribLocation(programID, "tex"), 0);
@@ -961,6 +1058,8 @@ int main(int argc, char* argv[])
     current_camera_pos = camera_pos[0];
     current_camera_look = camera_look[0];
     camera_index = 0;
+
+    current_checkpoint_pos = pinpoints[0];
 
     GLenum glew_status = glewInit();
     if (glew_status != GLEW_OK)
