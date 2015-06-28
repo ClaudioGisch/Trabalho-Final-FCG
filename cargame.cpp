@@ -85,6 +85,7 @@ double velocity = 0;
 int slowFactorAreia = 5;
 double acceleration = 0.0005;
 double maxSpeed = 0.3;
+bool drift = false;
 
 // terrain info
 std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
@@ -495,20 +496,34 @@ void idle()
 
         //angulo para rotacionar
         if (keystates[leftArrow]){
+            drift = true;
             if(velocity < 0){
                 angle += 0.5f;
+                if(camAngle <= 0 || camAngle > 350){
+                    camAngle -= 0.5f;
+                }
             }
             if(velocity > 0){
                 angle -= 0.5f;
+                if(camAngle < 10){
+                    camAngle += 0.5f;
+                }
             }
         }
         if (keystates[rightArrow]){
+            drift = true;
             if(velocity < 0){
 
                 angle -= 0.5f;
+                if(camAngle < 10){
+                    camAngle += 0.5f;
+                }
             }
             if(velocity > 0){
                 angle += 0.5f;
+                if(camAngle <= 0 || camAngle > 350){
+                    camAngle -= 0.5f;
+                }
             }
         }
         if(keystates['q']){
@@ -517,8 +532,31 @@ void idle()
         if(keystates['e']){
             camAngle -= 0.5f;
         }
-        if(keystates['2']){
+        if(keystates['w']){
             camAngle = 0;
+        }
+        if(keystates['s']){
+            camAngle = 180;
+        }
+        if(drift && !keystates[rightArrow]){
+            if(camAngle == 0){
+                drift = false;
+            }
+            else{
+                if(camAngle < 20){
+                    camAngle -= 0.5f;
+                }
+            }
+        }
+        if(drift && !keystates[leftArrow]){
+            if(camAngle == 0){
+                drift = false;
+            }
+            else{
+                if(camAngle > 340){
+                    camAngle += 0.5f;
+                }
+            }
         }
 
         if (angle == 360)
