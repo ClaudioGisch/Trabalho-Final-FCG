@@ -194,7 +194,7 @@ int init_resources()
 
     //load objects
     bool res = loadOBJ("pista.obj", vertices, uvs, normals);
-    bool res2 = loadOBJ("simplecar.obj", handVertices, handUV, handNormals);
+    bool res2 = loadOBJ("car4.obj", handVertices, handUV, handNormals);
     bool res3 = loadOBJ("areia.obj", areiaVertices, areiaUV, areiaNormals);
 
     //setup vertexID
@@ -225,7 +225,7 @@ int init_resources()
     glGenTextures(1, &textureID2);
     glBindTexture(GL_TEXTURE_2D, textureID2);
 
-    textureID2  = loadBMP_custom("car.bmp");
+    textureID2  = loadBMP_custom("texture.bmp");
 
     //sand texture
     glActiveTexture(GL_TEXTURE2);
@@ -398,11 +398,10 @@ void idle()
         else{
             posy += 0.015;
         }
-        velocity -= acceleration/2;
 
         // gravel sound
         sound3->play();
-        sound3->setVolume(abs(velocity));
+        sound3->setVolume(abs(velocity*1.5));
 
     }
     else
@@ -415,7 +414,6 @@ void idle()
     // engine
     sound2->play();
     sound2->setVolume(abs(velocity)*4);
-
 
 
     //andar para frente ou para tras
@@ -576,7 +574,7 @@ void onDisplay()
     glm::mat4 View       = glm::lookAt(
 
                                glm::vec3(posx-3*cos(pi*(-90-angle)/180), 4, posz-3*sin(pi*(-90-angle)/180)),
-                               glm::vec3(posx+4*cos(pi*(-90-angle)/180), 1, posz+4*sin(pi*(-90-angle)/180)),
+                               glm::vec3(posx+2.8*cos(pi*(-90-angle)/180), 1, posz+2.8*sin(pi*(-90-angle)/180)),
 
                                glm::vec3(0,1,0)
                            );
