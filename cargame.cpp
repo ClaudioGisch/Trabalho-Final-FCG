@@ -166,12 +166,31 @@ int camera_index=0;
 glm::vec2 current_checkpoint_pos;
 double checkpoint_radius = 16;
 int checkpoint_index = 0;
+float checkpoint_angle = 0;
 
 /** terrain info */
 std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
                                     vec2(196.0, 31.0), vec2(196.0, -45.0), vec2(151.0, -45.0), vec2(151.0, -95.0),
                                     vec2(132.0, -95.0), vec2(117.0, -79.0), vec2(43.0, -79.0), vec2(43.0, -45.0),
                                     vec2(-23.0, -45.0), vec2(-23.0, 0.0)
+                                   };
+
+ std::vector<glm::vec2> checkpoints = {vec2(75.8, -0.34), vec2(80.08, 4.2), vec2(84.2, 8.2), vec2(89.0, 13.9),
+                                    vec2(89.0, 60.7), vec2(93.8, 67.6), vec2(98.1, 71.9), vec2(105.1, 77.4),
+                                    vec2(112.3, 71.5), vec2(116.1, 67.6), vec2(121.0, 60.8),
+                                    vec2(121.2, 42.5), vec2(125.8, 37.6), vec2(129.8, 33.8), vec2(135.4, 30.0),
+                                    vec2(183.0, 29.7), vec2(188.7, 25.1), vec2(195.7, 21.2), vec2(197.4, -14.4),
+                                    vec2(197.4, -29.8), vec2(193.0, -37.2), vec2(189.2, -41.1), vec2(182.3, -46.1),
+                                    vec2(164.7, -46.0), vec2(159.7, -50.2), vec2(154.0, -53.0), vec2(151.0, -63.0),
+
+                                    vec2(151.2, -76.6), vec2(146.3, -85.4), vec2(142.5, -89.4), vec2(135.1, -96.2),
+                                    vec2(129.4, -87.9), vec2(123.0, -80.5), vec2(110.3, -77.7), vec2(104.0, -78.0),
+
+                                    vec2(60.0, -79.0), vec2(50.0, -75.0), vec2(47.9, -69.7), vec2(43.2, -62.8),
+                                    vec2(38.4, -54.4), vec2(34.4, -50.6), vec2(25.6, -46.0),
+
+                                    vec2(-5.9, -46.1), vec2(-14.7, -41.8), vec2(-18.7, -38.0),vec2(-23.9, -31.7),
+                                    vec2(-24.0, -16.8), vec2(-19.5, -8.0), vec2(-15.3, -3.4), vec2(-8.5, 0.1)
                                    };
 
 // colliders
@@ -231,6 +250,36 @@ float dot(vec2 p, vec2 v)
     return p.x * v.x + p.y * v.y;
 }
 
+float vectorSize(vec2 a){
+    return sqrt(pow(a.x, 2.0) + pow(a.y, 2.0));
+}
+
+float crossAngle(vec2 vector1, vec2 vector2){
+
+    printf("Vector1 size: %.2f\n", vectorSize(vector1));
+    printf("Vector2 size: %.2f\n", vectorSize(vector2));
+
+    vector1 = vector1 / vectorSize(vector1);
+    vector2 = vector2 / vectorSize(vector2);
+
+    printf("Vector 1: %.2f, %.2f\n", vector1.x, vector1.y);
+    printf("Vector 2: %.2f, %.2f\n", vector2.x, vector2.y);
+
+    printf("Vector1 size: %.2f\n", vectorSize(vector1));
+    printf("Vector2 size: %.2f\n", vectorSize(vector2));
+
+    float dotcalc = dot(vector1, vector2);
+
+    float cos0 = dotcalc;
+
+    printf("dotcalc: %.2f\n", dotcalc);
+    printf("cos0: %.2f\n", cos0);
+
+    //getchar();
+
+    return acos(cos0) * 180.0 / pi;
+}
+
 float minimum_distance(vec2 v, vec2 w, vec2 p)
 {
     // Return minimum distance between line segment vw and point p
@@ -277,10 +326,10 @@ int init_resources()
     glEnable(GL_DEPTH_TEST);
 
     //load objects
-    bool res = loadOBJ("objects/pista.obj", vertices, uvs, normals);
+    bool res = loadOBJ("objects/pista7.obj", vertices, uvs, normals);
     bool res2 = loadOBJ("objects/car4.obj", handVertices, handUV, handNormals);
     bool res3 = loadOBJ("objects/areia.obj", areiaVertices, areiaUV, areiaNormals);
-    bool res4 = loadOBJ("objects/checkpoint.obj", checkVertices, checkUV, checkNormals);
+    bool res4 = loadOBJ("objects/arrow.obj", checkVertices, checkUV, checkNormals);
     bool res5 = loadOBJ("objects/finish.obj", finishVertices, finishUV, finishNormals);
 
     //setup vertexID
@@ -336,7 +385,7 @@ int init_resources()
     glGenTextures(1, &textureID4);
     glBindTexture(GL_TEXTURE_2D, textureID4);
 
-    textureID4  = loadBMP_custom("textures/checkboard.bmp");
+    textureID4  = loadBMP_custom("textures/arrow.bmp");
 
     //checkpoint texture
     glActiveTexture(GL_TEXTURE4);
@@ -577,19 +626,17 @@ void idle()
         int j = 0;
         int i = 0;
 
-        //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
-
-        for(i = 0; i < pinpoints.size()-1; i++)
+        for(i = 0; i < checkpoints.size()-1; i++)
         {
 
-            dis = minimum_distance(pinpoints[i], pinpoints[i+1], car_pos);
+            dis = minimum_distance(checkpoints[i], checkpoints[i+1], car_pos);
             if ( dis < mindis)
             {
                 mindis = dis;
             }
         }
 
-        dis = minimum_distance(pinpoints[i], pinpoints[0], car_pos);
+        dis = minimum_distance(checkpoints[i], checkpoints[0], car_pos);
         if ( dis < mindis)
         {
             mindis = dis;
@@ -842,13 +889,19 @@ void idle()
 
     if(col){
         checkpoint_index++;
+
         s_success->play();
         s_success->setVolume(0.2);
+
         if(checkpoint_index == pinpoints.size()){
             checkpoint_index = 0;
         }
         current_checkpoint_pos = pinpoints[checkpoint_index];
+
+        checkpoint_angle = crossAngle(pinpoints[checkpoint_index] - pinpoints[checkpoint_index-1], pinpoints[checkpoint_index+1] - pinpoints[checkpoint_index]);
     }
+
+    printf("Arrow angle: %.2f\n", checkpoint_angle);
 
     glutPostRedisplay();
 
@@ -968,10 +1021,11 @@ void onDisplay()
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // check
-    glm::mat4 escCheck = glm::scale(mat4(1.0f), vec3(18.0f, 1.0f, 18.0f));
-    glm::mat4 transCheck = glm::translate(mat4(1.0f), vec3(current_checkpoint_pos.x, 1.0f, current_checkpoint_pos.y));
-    MVP        = Projection * View * Model * transCheck * escCheck;
+    // arrow
+    glm::mat4 escArrow = glm::scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
+    glm::mat4 transArrow = glm::translate(mat4(1.0f), vec3(current_checkpoint_pos.x, 2.5f, current_checkpoint_pos.y));
+    glm::mat4 rotArrow = glm::rotate(mat4(1.0f), checkpoint_angle, vec3(0, 1.0f, 0));
+    MVP        = Projection * View * Model * transArrow * escArrow * rotArrow;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer4, 1, uvBuffer4, textureID4, 3, checkVertices.size());
 
