@@ -634,9 +634,8 @@ void idle()
 
         // engine
         sound2->play();
-        sound2->setPitchShift(velocity*5);
-        sound2->setVolume(abs(velocity)*4);
-        //sound2->setVolume(abs(velocity)*1.3);
+        sound2->setPitchShift(abs(velocity)*5);
+        sound2->setVolume(abs(velocity)*1.3);
 
 
         //andar para frente ou para tras
@@ -668,7 +667,9 @@ void idle()
                 }
                 else
                 {
-                    velocity += acceleration;
+                    if(velocity < maxSpeed/4){
+                        velocity += acceleration;
+                    }
                 }
             }
         }
