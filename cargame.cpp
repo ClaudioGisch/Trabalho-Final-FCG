@@ -95,12 +95,15 @@ string angus_mcfife = "playlist/angus_mcfife.mp3";
 string background = "sounds/happyrock.mp3";
 string cardrive = "sounds/carrun.mp3";
 string gravel = "sounds/gravel.mp3";
+string success = "sounds/success.mp3";
 int currentMusic = 0;
 bool changingMusic = false;
 int playListSize = 6;
 float volume = 0.1f;
 bool changingVolume = false;
 AudioDevicePtr device(OpenDevice());
+
+OutputStreamPtr s_success(OpenSound(device, success.c_str(), false));
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
 OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
 OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
@@ -131,7 +134,7 @@ double posx = 1;
 double posz = 1;
 double posy = 1.5f;
 double car_radius = 1;
-float car_angle = 180;
+float car_angle = 270;
 float camAngle = 0;
 float pauseCamAngle = 0;
 int upArrow = 0;
@@ -823,6 +826,33 @@ void idle()
         }
     }
 
+    sphereCollider car_collider;
+    sphereCollider checkpoint_collider;
+
+    car_collider.radius = car_radius;
+    car_collider.x = posx;
+    car_collider.z = posz;
+
+    checkpoint_collider.radius = checkpoint_radius;
+    checkpoint_collider.x = current_checkpoint_pos.x;
+    checkpoint_collider.z = current_checkpoint_pos.y;
+
+    bool col = SphereColliderCmp(car_collider, checkpoint_collider);
+
+    if(col){
+        checkpoint_index++;
+        s_success->play();
+        s_success->setVolume(0.2);
+        if(checkpoint_index == pinpoints.size()){
+            checkpoint_index = 0;
+        }
+        current_checkpoint_pos = pinpoints[checkpoint_index];
+    }
+
+    glutPostRedisplay();
+
+    /** **/
+
     calculateFPS();
 
     gettimeofday(&end_timer, NULL);
@@ -849,29 +879,6 @@ void idle()
     printf("Elapsed time: %ld milliseconds\n", mtime);
 
     printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, car_angle, posx, 0.0, posz, velocity);
-
-    sphereCollider car_collider;
-    sphereCollider checkpoint_collider;
-
-    car_collider.radius = car_radius;
-    car_collider.x = posx;
-    car_collider.z = posz;
-
-    checkpoint_collider.radius = checkpoint_radius;
-    checkpoint_collider.x = current_checkpoint_pos.x;
-    checkpoint_collider.z = current_checkpoint_pos.y;
-
-    bool col = SphereColliderCmp(car_collider, checkpoint_collider);
-
-    if(col){
-        checkpoint_index++;
-        if(checkpoint_index == pinpoints.size()){
-            checkpoint_index = 0;
-        }
-        current_checkpoint_pos = pinpoints[checkpoint_index];
-    }
-
-    glutPostRedisplay();
 }
 
 //draw method
@@ -957,6 +964,8 @@ void onDisplay()
     MVP        = Projection * View * Model * transAreia;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID3, 2, areiaVertices.size());
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // check
     glm::mat4 escCheck = glm::scale(mat4(1.0f), vec3(18.0f, 1.0f, 18.0f));
