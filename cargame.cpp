@@ -98,19 +98,19 @@ string gravel = "sounds/gravel.mp3";
 string success = "sounds/success.mp3";
 int currentMusic = 0;
 bool changingMusic = false;
-int playListSize = 6;
+int playListSize = 1;
 float volume = 0.1f;
 bool changingVolume = false;
 AudioDevicePtr device(OpenDevice());
 
 OutputStreamPtr s_success(OpenSound(device, success.c_str(), false));
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
-OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
-OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
-OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
-OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
-OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
-OutputStreamPtr playList[] = {sound, track1, track2, track3, track4, track5};
+//OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
+//OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
+//OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
+//OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
+//OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
+OutputStreamPtr playList[] = {sound/*, track1, track2, track3, track4, track5*/};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 
@@ -133,6 +133,8 @@ float game_fps = 60;
 double posx = 1;
 double posz = 1;
 double posy = 1.5f;
+
+/* Some globals */
 double car_radius = 1;
 float car_angle = 270;
 float camAngle = 0;
@@ -147,6 +149,11 @@ int slowFactorAreia = 5;
 double acceleration = 0.005;
 double maxSpeed = 1.0;
 bool drift = false;
+int bot_number = 3;
+bool pinpoint_change = true;
+int bot_last_pinpoint[3] = {0,0,0};
+vec2 bot_position[3] = {};
+vec2 bot_direction[3];
 
 /** camera */
 glm::vec3 current_camera_pos;
@@ -229,6 +236,35 @@ float length_squared(vec2 p, vec2 v)
 float dot(vec2 p, vec2 v)
 {
     return p.x * v.x + p.y * v.y;
+}
+
+vec2 vetor_unitario_ponto(vec2 p1, vec2 p2){
+    vec2 new_point;
+    float p_distance = distance(p1, p2);
+    new_point.y = (p2.y - p1.y) / p_distance;
+    new_point.x = (p2.x - p1.x) / p_distance;
+    return new_point;
+}
+
+vec2 move_car(vec2 p1, vec2 p2, int bot){
+    float distance_before = distance(p1, p2);
+    vec2 bot_direction = vetor_unitario_ponto(p1, p2);
+    p1.y += bot_direction.y;
+    p1.x += bot_direction.x;
+    float distance_after = distance(p1, p2);
+    if(distance_before <= distance_after){
+        bot_last_pinpoint[bot]++;
+        pinpoint_change = true;
+        if(bot_last_pinpoint[bot] == pinpoints.size()){
+            bot_last_pinpoint[bot] = 0;
+        }
+    }
+    return p1;
+}
+
+
+vec2 test_pinpoint(vec2 p1, vec2 p2, int last_pinpoint){
+
 }
 
 float minimum_distance(vec2 v, vec2 w, vec2 p)
@@ -577,11 +613,15 @@ void idle()
         int j = 0;
         int i = 0;
 
+        car_pos = move_car(car_pos, pinpoints[bot_last_pinpoint[i]], i);
+
+        posx = car_pos.x;
+        posz = car_pos.y;
+
         //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
 
         for(i = 0; i < pinpoints.size()-1; i++)
         {
-
             dis = minimum_distance(pinpoints[i], pinpoints[i+1], car_pos);
             if ( dis < mindis)
             {
@@ -851,6 +891,8 @@ void idle()
     }
 
     glutPostRedisplay();
+
+
 
     /** **/
 
