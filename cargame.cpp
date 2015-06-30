@@ -80,6 +80,11 @@ std::vector<glm::vec3> finishVertices;
 std::vector<glm::vec2> finishUV;
 std::vector<glm::vec3> finishNormals;
 
+// bot textures
+GLuint textureID6;
+GLuint textureID7;
+GLuint textureID8;
+
 /** Globals */
 
 int number_of_laps = 0;
@@ -130,8 +135,8 @@ GLfloat ambientShininess = 0.30;
 float game_fps = 60;
 
 /** player position */
-double posx = 1;
-double posz = 1;
+double posx = 3;
+double posz = 0;
 double posy = 1.5f;
 
 /* Some globals */
@@ -152,8 +157,8 @@ bool drift = false;
 int bot_number = 3;
 bool pinpoint_change = true;
 int bot_last_pinpoint[3] = {0,0,0};
-vec2 bot_position[3] = {};
-vec2 bot_direction[3];
+vec2 bot_position[3] = {vec2(3.0, 3.0), vec2(6.0, 3.0), vec2(6.0, 0.0)};
+float bot_angle[3] = {270.0f, 270.0f, 270.0f};
 
 /** camera */
 glm::vec3 current_camera_pos;
@@ -433,6 +438,27 @@ int init_resources()
     glBindTexture(GL_TEXTURE_2D, textureID5);
 
     textureID5  = loadBMP_custom("textures/finish.bmp");
+
+    // bot1 texture
+    glActiveTexture(GL_TEXTURE5);
+    glGenTextures(1, &textureID6);
+    glBindTexture(GL_TEXTURE_2D, textureID6);
+
+    textureID6  = loadBMP_custom("textures/bot1.bmp");
+
+    // bot2 texture
+    glActiveTexture(GL_TEXTURE6);
+    glGenTextures(1, &textureID7);
+    glBindTexture(GL_TEXTURE_2D, textureID7);
+
+    textureID7  = loadBMP_custom("textures/bot2.bmp");
+
+    // bot2 texture
+    glActiveTexture(GL_TEXTURE7);
+    glGenTextures(1, &textureID8);
+    glBindTexture(GL_TEXTURE_2D, textureID8);
+
+    textureID8  = loadBMP_custom("textures/bot3.bmp");
 
 
     /** generate and bind vertices and uvs */
@@ -1056,6 +1082,31 @@ void onDisplay()
     MVP        = Projection * View * Model * transCar * escCar * rotCar * fixCar;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID2, 1, carVertices.size());
+
+    // bots
+    glm::mat4 escBot1 = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
+    glm::mat4 transBot1 = glm::translate(mat4(1.0f), vec3(bot_position[0].x, 1.5f, bot_position[0].y));
+    glm::mat4 fixBot1 = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 rotBot1 = glm::rotate(mat4(1.0f), bot_angle[0], vec3(0, 1.0f, 0));
+    MVP        = Projection * View * Model * transBot1 * escBot1 * rotBot1 * fixBot1;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID6, 5, carVertices.size());
+
+    glm::mat4 escBot2 = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
+    glm::mat4 transBot2 = glm::translate(mat4(1.0f), vec3(bot_position[1].x, 1.5f, bot_position[1].y));
+    glm::mat4 fixBot2 = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 rotBot2 = glm::rotate(mat4(1.0f), bot_angle[1], vec3(0, 1.0f, 0));
+    MVP        = Projection * View * Model * transBot2 * escBot2 * rotBot2 * fixBot2;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID7, 6, carVertices.size());
+
+    glm::mat4 escBot3 = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
+    glm::mat4 transBot3 = glm::translate(mat4(1.0f), vec3(bot_position[2].x, 1.5f, bot_position[2].y));
+    glm::mat4 fixBot3 = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 rotBot3 = glm::rotate(mat4(1.0f), bot_angle[2], vec3(0, 1.0f, 0));
+    MVP        = Projection * View * Model * transBot3 * escBot3 * rotBot3 * fixBot3;
+    glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+    drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID8, 7, carVertices.size());
 
     // sand
     glm::mat4 transSand = glm::translate(mat4(1.0f), vec3(0.0f, 1.0f, 0.0f));
