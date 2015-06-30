@@ -155,7 +155,6 @@ double acceleration = 0.005;
 double maxSpeed = 1.0;
 bool drift = false;
 int bot_number = 3;
-bool pinpoint_change = true;
 int bot_last_pinpoint[3] = {0,0,0};
 vec2 bot_position[3] = {vec2(3.0, 3.0), vec2(6.0, 3.0), vec2(6.0, 0.0)};
 float bot_angle[3] = {270.0f, 270.0f, 270.0f};
@@ -285,7 +284,6 @@ vec2 move_car(vec2 p1, vec2 p2, int bot){
     float distance_after = distance(p1, p2);
     if(distance_before <= distance_after){
         bot_last_pinpoint[bot]++;
-        pinpoint_change = true;
         if(bot_last_pinpoint[bot] == checkpoints.size()){
             bot_last_pinpoint[bot] = 0;
         }
@@ -686,11 +684,20 @@ void idle()
 
         float mindis = 10000;
         glm::vec2 car_pos;
+        vec2 bot_pos;
         car_pos.x = posx;
         car_pos.y = posz;
         float dis = 10000;
         int j = 0;
         int i = 0;
+
+        int bot;
+        for(bot = 0; bot < bot_number; bot++){
+
+            bot_position[bot] = move_car(bot_position[bot], checkpoints[bot_last_pinpoint[bot]], bot);
+
+        }
+
 
         for(i = 0; i < checkpoints.size()-1; i++)
         {
