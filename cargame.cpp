@@ -85,6 +85,8 @@ GLuint textureID6;
 GLuint textureID7;
 GLuint textureID8;
 
+float crossAngle(vec2 vector1, vec2 vector2);
+
 /** Globals */
 
 int number_of_laps = 0;
@@ -211,14 +213,6 @@ std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.
                                        vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-37.1, 0.0)
                                        };
 
-// colliders
-typedef struct sphere_col
-{
-    double radius;
-    double x;
-    double z;
-} sphereCollider;
-
 //  The number of frames
 int frameCount = 0;
 
@@ -232,6 +226,14 @@ int currentTime = 0, previousTime = 0;
 /** Funções auxiliares */
 
 /** Sphere Collision */
+
+// colliders
+typedef struct sphere_col
+{
+    double radius;
+    double x;
+    double z;
+} sphereCollider;
 
 // uma espécie de construtor
 void getObjectSphereCollider(sphereCollider *collider, int x, int z, int radius)
@@ -249,6 +251,23 @@ bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2)
     double sum_radius = sphere1.radius + sphere2.radius;
 
     return sum_radius > distance;
+}
+
+/** Retactangular Collision */
+typedef struct ret_col
+{
+    vec2 up;
+    vec2 down;
+    vec2 right;
+    vec2 left;
+} rectangularCollider;
+
+void getObjectRectangularCollider(rectangularCollider *collider, int x, int z, vec2 desloc)
+{
+    collider->up = vec2(x+desloc.x, z);
+    collider->down = vec2(x-desloc.x, z);
+    collider->right = vec2(x, z+desloc.y);
+    collider->left = vec2(x, z-desloc.y);
 }
 
 /** Vector logic */
@@ -288,6 +307,7 @@ vec2 move_car(vec2 p1, vec2 p2, int bot){
             bot_last_pinpoint[bot] = 0;
         }
     }
+
     return p1;
 }
 
@@ -301,24 +321,12 @@ float vectorSize(vec2 a){
 
 float crossAngle(vec2 vector1, vec2 vector2){
 
-    printf("Vector1 size: %.2f\n", vectorSize(vector1));
-    printf("Vector2 size: %.2f\n", vectorSize(vector2));
-
     vector1 = vector1 / vectorSize(vector1);
     vector2 = vector2 / vectorSize(vector2);
-
-    printf("Vector 1: %.2f, %.2f\n", vector1.x, vector1.y);
-    printf("Vector 2: %.2f, %.2f\n", vector2.x, vector2.y);
-
-    printf("Vector1 size: %.2f\n", vectorSize(vector1));
-    printf("Vector2 size: %.2f\n", vectorSize(vector2));
 
     float dotcalc = dot(vector1, vector2);
 
     float cos0 = dotcalc;
-
-    printf("dotcalc: %.2f\n", dotcalc);
-    printf("cos0: %.2f\n", cos0);
 
     //getchar();
 
@@ -630,6 +638,9 @@ void idle()
     struct timeval start_timer, end_timer;
 
     long mtime, seconds, useconds;
+
+    posx = bot_position[0].x;
+    posz = bot_position[0].y;
 
     gettimeofday(&start_timer, NULL);
 
@@ -980,8 +991,6 @@ void idle()
 
     glutPostRedisplay();
 
-
-
     /** **/
 
     calculateFPS();
@@ -1051,6 +1060,16 @@ void drawMesh(int vAttri, GLuint vBuffer,
     glDrawArrays(GL_TRIANGLES, 0, vSize );
 }
 
+void drawBitmapText(char *string,float x,float y,float z)
+{
+	char *c;
+	glRasterPos3f(x, y,z);
+
+	for (c=string; *c != '\0'; c++)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, *c);
+	}
+}
 
 void onDisplay()
 {
@@ -1058,6 +1077,11 @@ void onDisplay()
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     glUseProgram(programID);
+
+    glLoadIdentity();
+
+	glColor3f(0,1,0);
+    drawBitmapText("Osama Hosam's OpenGL Tutorials",30,30,0);
 
     glm::mat4 Projection = glm::perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f);
 
@@ -1093,7 +1117,7 @@ void onDisplay()
     // bots
     glm::mat4 escBot1 = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
     glm::mat4 transBot1 = glm::translate(mat4(1.0f), vec3(bot_position[0].x, 1.5f, bot_position[0].y));
-    glm::mat4 fixBot1 = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 fixBot1 = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
     glm::mat4 rotBot1 = glm::rotate(mat4(1.0f), bot_angle[0], vec3(0, 1.0f, 0));
     MVP        = Projection * View * Model * transBot1 * escBot1 * rotBot1 * fixBot1;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -1101,7 +1125,7 @@ void onDisplay()
 
     glm::mat4 escBot2 = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
     glm::mat4 transBot2 = glm::translate(mat4(1.0f), vec3(bot_position[1].x, 1.5f, bot_position[1].y));
-    glm::mat4 fixBot2 = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 fixBot2 = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
     glm::mat4 rotBot2 = glm::rotate(mat4(1.0f), bot_angle[1], vec3(0, 1.0f, 0));
     MVP        = Projection * View * Model * transBot2 * escBot2 * rotBot2 * fixBot2;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
@@ -1109,7 +1133,7 @@ void onDisplay()
 
     glm::mat4 escBot3 = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
     glm::mat4 transBot3 = glm::translate(mat4(1.0f), vec3(bot_position[2].x, 1.5f, bot_position[2].y));
-    glm::mat4 fixBot3 = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 fixBot3 = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
     glm::mat4 rotBot3 = glm::rotate(mat4(1.0f), bot_angle[2], vec3(0, 1.0f, 0));
     MVP        = Projection * View * Model * transBot3 * escBot3 * rotBot3 * fixBot3;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
