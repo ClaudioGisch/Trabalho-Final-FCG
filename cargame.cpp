@@ -40,18 +40,18 @@ GLuint vertexID;
 GLuint vertexBuffer;
 GLuint uvBuffer;
 GLuint textureID1;                  // Get a handle for our "myTextureSampler" uniform
-std::vector<glm::vec3> vertices;
-std::vector<glm::vec2> uvs;
-std::vector<glm::vec3> normals;
+std::vector<glm::vec3> roadVertices;
+std::vector<glm::vec2> roadUV;
+std::vector<glm::vec3> roadNormals;
 
 //car
 GLuint vertexID2;
 GLuint vertexBuffer2;
 GLuint uvBuffer2;
 GLuint textureID2;                  // Get a handle for our "myTextureSampler" uniform
-std::vector<glm::vec3> handVertices;
-std::vector<glm::vec2> handUV;
-std::vector<glm::vec3> handNormals;
+std::vector<glm::vec3> carVertices;
+std::vector<glm::vec2> carUV;
+std::vector<glm::vec3> carNormals;
 
 //sand
 GLuint vertexID3;
@@ -171,34 +171,41 @@ int camera_index=0;
 /** Checkpoints */
 
 glm::vec2 current_checkpoint_pos;
-double checkpoint_radius = 16;
+double checkpoint_radius = 12.0;
 int checkpoint_index = 0;
 float checkpoint_angle = 0;
 
 /** terrain info */
+double road_length = 8.0;
+
 std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
                                     vec2(196.0, 31.0), vec2(196.0, -45.0), vec2(151.0, -45.0), vec2(151.0, -95.0),
                                     vec2(132.0, -95.0), vec2(117.0, -79.0), vec2(43.0, -79.0), vec2(43.0, -45.0),
                                     vec2(-23.0, -45.0), vec2(-23.0, 0.0)
                                    };
 
- std::vector<glm::vec2> checkpoints = {vec2(75.8, -0.34), vec2(80.08, 4.2), vec2(84.2, 8.2), vec2(89.0, 13.9),
-                                    vec2(89.0, 60.7), vec2(93.8, 67.6), vec2(98.1, 71.9), vec2(105.1, 77.4),
-                                    vec2(112.3, 71.5), vec2(116.1, 67.6), vec2(121.0, 60.8),
-                                    vec2(121.2, 42.5), vec2(125.8, 37.6), vec2(129.8, 33.8), vec2(135.4, 30.0),
-                                    vec2(183.0, 29.7), vec2(188.7, 25.1), vec2(195.7, 21.2), vec2(197.4, -14.4),
-                                    vec2(197.4, -29.8), vec2(193.0, -37.2), vec2(189.2, -41.1), vec2(182.3, -46.1),
-                                    vec2(164.7, -46.0), vec2(159.7, -50.2), vec2(154.0, -53.0), vec2(151.0, -63.0),
-
-                                    vec2(151.2, -76.6), vec2(146.3, -85.4), vec2(142.5, -89.4), vec2(135.1, -96.2),
-                                    vec2(129.4, -87.9), vec2(123.0, -80.5), vec2(110.3, -77.7), vec2(104.0, -78.0),
-
-                                    vec2(60.0, -79.0), vec2(50.0, -75.0), vec2(47.9, -69.7), vec2(43.2, -62.8),
-                                    vec2(38.4, -54.4), vec2(34.4, -50.6), vec2(25.6, -46.0),
-
-                                    vec2(-5.9, -46.1), vec2(-14.7, -41.8), vec2(-18.7, -38.0),vec2(-23.9, -31.7),
-                                    vec2(-24.0, -16.8), vec2(-19.5, -8.0), vec2(-15.3, -3.4), vec2(-8.5, 0.1)
-                                   };
+std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.4, 3.5), vec2(101.2, 5.8), vec2(102.9, 8.2),
+                                       vec2(105.3, 12.4), vec2(106.6, 17.3), vec2(106.2, 24.7), vec2(104.2, 30.1), vec2(101.8, 33.8),
+                                       vec2(98.3, 36.3), vec2(94.2, 38.5), vec2(90.6, 39.2), vec2(84.6, 39.9), vec2(48.5, 40.1),
+                                       vec2(45.1, 40.8), vec2(41.6, 42.0), vec2(37.8, 43.9), vec2(34.5, 47.5), vec2(32.2, 50.7),
+                                       vec2(31.1, 53.7), vec2(30.4, 56.7), vec2(29.9, 60.9), vec2(29.9, 89.2), vec2(30.3, 93.7),
+                                       vec2(31.2, 98.0), vec2(32.4, 103.0), vec2(34.3, 107.0), vec2(37.2, 111.7), vec2(40.7, 115.0),
+                                       vec2(43.5, 118.4), vec2(47.3, 121.7), vec2(51.3, 125.1), vec2(72.0, 140.5), vec2(77.3, 145.7),
+                                       vec2(80.1, 149.6), vec2(83.2, 154.6), vec2(83.9, 157.3), vec2(84.8, 160.4), vec2(85.5, 164.0),
+                                       vec2(85.7, 167.6), vec2(85.9, 172.3), vec2(85.8, 208.3), vec2(85.3, 214.4), vec2(84.4, 219.6),
+                                       vec2(83.1, 223.9), vec2(81.0, 228.8), vec2(79.0, 233.0), vec2(76.6, 236.3), vec2(72.4, 241.3),
+                                       vec2(68.9, 244.1), vec2(64.7, 246.9), vec2(61.1, 249.1), vec2(56.9, 250.5), vec2(51.6, 252.1),
+                                       vec2(45.4, 253.1), vec2(41.5, 253.4), vec2(36.7, 253.4), vec2(32.6, 252.8), vec2(27.3, 251.5),
+                                       vec2(22.4, 249.6), vec2(18.2, 247.6), vec2(13.9, 245.2), vec2(10.4, 242.1), vec2(6.5, 237.8),
+                                       vec2(3.6, 233.2), vec2(1.1, 228.4), vec2(-0.6, 223.7), vec2(-1.6, 219.5), vec2(-2.3, 213.7),
+                                       vec2(-2.8, 207.9), vec2(-3.0, 202.7), vec2(-3.0, 161.8), vec2(-3.0, 106.0), vec2(-3.3, 102.3),
+                                       vec2(-4.4, 98.9), vec2(-5.5, 96.8), vec2(-7.7, 93.6), vec2(-10.4, 90.8), vec2(-14.1, 88.3),
+                                       vec2(-17.9, 86.7), vec2(-21.0, 86.0), vec2(-24.8, 85.9), vec2(-29.5, 86.0), vec2(-59.0, 85.9),
+                                       vec2(-80.3, 85.7), vec2(-85.1, 84.8), vec2(-88.1, 83.0), vec2(-91.9, 80.3), vec2(-94.7, 76.8),
+                                       vec2(-96.3, 73.3), vec2(-97.1, 69.8), vec2(-97.5, 65.5), vec2(-97.5, 39.8), vec2(-97.6, 19.4),
+                                       vec2(-96.9, 14.9), vec2(-95.7, 11.9), vec2(-93.4, 7.7), vec2(-91.2, 5.2), vec2(-89.5, 3.8),
+                                       vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-37.1, 0.0)
+                                       };
 
 // colliders
 typedef struct sphere_col
@@ -357,13 +364,13 @@ int init_resources()
         keystates[i] = false;
     }
 
-    glClearColor(0.4f, 0.4f, 0.4f, 0.0f);
+    glClearColor(0.4f, 0.698f, 1.0f, 0.0f);
     glEnable(GL_DEPTH_TEST);
 
     //load objects
-    bool res = loadOBJ("objects/pista7.obj", vertices, uvs, normals);
-    bool res2 = loadOBJ("objects/car4.obj", handVertices, handUV, handNormals);
-    bool res3 = loadOBJ("objects/areia.obj", areiaVertices, areiaUV, areiaNormals);
+    bool res = loadOBJ("objects/bezcurve2.obj", roadVertices, roadUV, roadNormals);
+    bool res2 = loadOBJ("objects/car4.obj", carVertices, carUV, carNormals);
+    bool res3 = loadOBJ("objects/sand2.obj", areiaVertices, areiaUV, areiaNormals);
     bool res4 = loadOBJ("objects/arrow.obj", checkVertices, checkUV, checkNormals);
     bool res5 = loadOBJ("objects/finish.obj", finishVertices, finishUV, finishNormals);
 
@@ -389,8 +396,6 @@ int init_resources()
     programID = LoadShaders( "TransformVertexShader.vertexshader", "TextureFragmentShader.fragmentshader" );
     matrixID = glGetUniformLocation(programID, "MVP");
     modelID = glGetUniformLocation(programID, "model");
-
-    glClearColor(0.4f, 0.4f, 0.4f, 0.0f);
 
     /**loading textures */
 
@@ -433,18 +438,18 @@ int init_resources()
     /** generate and bind vertices and uvs */
     glGenBuffers(1, &vertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, roadVertices.size() * sizeof(glm::vec3), &roadVertices[0], GL_STATIC_DRAW);
     glGenBuffers(1, &uvBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-    glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, roadUV.size() * sizeof(glm::vec2), &roadUV[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &vertexBuffer2);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer2);
-    glBufferData(GL_ARRAY_BUFFER, handVertices.size() * sizeof(glm::vec3), &handVertices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, carVertices.size() * sizeof(glm::vec3), &carVertices[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &uvBuffer2);
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer2);
-    glBufferData(GL_ARRAY_BUFFER, handUV.size() * sizeof(glm::vec2), &handUV[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, carUV.size() * sizeof(glm::vec2), &carUV[0], GL_STATIC_DRAW);
 
     glGenBuffers(1, &vertexBuffer3);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer3);
@@ -657,26 +662,21 @@ void idle()
         glm::vec2 car_pos;
         car_pos.x = posx;
         car_pos.y = posz;
-        float dis;
+        float dis = 10000;
         int j = 0;
         int i = 0;
 
-        car_pos = move_car(car_pos, checkpoints[bot_last_pinpoint[i]], i);
-
-        posx = car_pos.x;
-        posz = car_pos.y;
-
-        //mindis = minimum_distance(pinpoints[0], pinpoints[13], car_pos);
-
         for(i = 0; i < checkpoints.size()-1; i++)
         {
-
             dis = minimum_distance(checkpoints[i], checkpoints[i+1], car_pos);
+            //printf("%.2f ", dis);
             if ( dis < mindis)
             {
+                //printf("- %.2f to %.2f - ", mindis, dis);
                 mindis = dis;
             }
         }
+        //i++;
 
         dis = minimum_distance(checkpoints[i], checkpoints[0], car_pos);
         if ( dis < mindis)
@@ -685,7 +685,7 @@ void idle()
         }
 
         printf("\n Distance to middle: %.2f\n",mindis);
-        if(mindis > 8)
+        if(mindis > road_length)
         {
             printf(" Voce esta na areia!\n");
             if (abs(velocity) > maxSpeed/slowFactorAreia)
@@ -935,12 +935,12 @@ void idle()
         s_success->play();
         s_success->setVolume(0.2);
 
-        if(checkpoint_index == pinpoints.size()){
+        if(checkpoint_index == checkpoints.size()){
             checkpoint_index = 0;
         }
-        current_checkpoint_pos = pinpoints[checkpoint_index];
+        current_checkpoint_pos = checkpoints[checkpoint_index];
 
-        checkpoint_angle = crossAngle(pinpoints[checkpoint_index] - pinpoints[checkpoint_index-1], pinpoints[checkpoint_index+1] - pinpoints[checkpoint_index]);
+        checkpoint_angle = crossAngle(checkpoints[checkpoint_index] - checkpoints[checkpoint_index-1], checkpoints[checkpoint_index+1] - checkpoints[checkpoint_index]);
     }
 
     printf("Arrow angle: %.2f\n", checkpoint_angle);
@@ -1042,24 +1042,24 @@ void onDisplay()
 
     // road
 
-    glm::mat4 transPista = glm::translate(mat4(1.0f), vec3(0, 0.0f, 0));
+    glm::mat4 transRoad = glm::translate(mat4(1.0f), vec3(0.0, 0.75f, 0.0));
 
-    MVP        = Projection * View * Model * transPista;
+    MVP        = Projection * View * Model * transRoad;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer, 1, uvBuffer, textureID1, 0, vertices.size());
+    drawMesh(0, vertexBuffer, 1, uvBuffer, textureID1, 0, roadVertices.size());
 
     // car
-    glm::mat4 escMao = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
-    glm::mat4 transMao = glm::translate(mat4(1.0f), vec3(posx, posy, posz));
-    glm::mat4 fixRot = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
-    glm::mat4 rotMao = glm::rotate(mat4(1.0f), car_angle, vec3(0, 1.0f, 0));
-    MVP        = Projection * View * Model * transMao * escMao * rotMao * fixRot;
+    glm::mat4 escCar = glm::scale(mat4(1.0f), vec3(0.3f, 0.3f, 0.3f));
+    glm::mat4 transCar = glm::translate(mat4(1.0f), vec3(posx, posy, posz));
+    glm::mat4 fixCar = glm::rotate(mat4(1.0f), 90.0f, vec3(0, 1.0f, 0));
+    glm::mat4 rotCar = glm::rotate(mat4(1.0f), car_angle, vec3(0, 1.0f, 0));
+    MVP        = Projection * View * Model * transCar * escCar * rotCar * fixCar;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
-    drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID2, 1, handVertices.size());
+    drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID2, 1, carVertices.size());
 
     // sand
-    glm::mat4 transAreia = glm::translate(mat4(1.0f), vec3(0.0f, -0.1f, 0.0f));
-    MVP        = Projection * View * Model * transAreia;
+    glm::mat4 transSand = glm::translate(mat4(1.0f), vec3(0.0f, 1.0f, 0.0f));
+    MVP        = Projection * View * Model * transSand;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer3, 1, uvBuffer3, textureID3, 2, areiaVertices.size());
 
