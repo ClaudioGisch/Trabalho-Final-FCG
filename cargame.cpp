@@ -85,7 +85,15 @@ GLuint textureID6;
 GLuint textureID7;
 GLuint textureID8;
 
-float crossAngle(vec2 vector1, vec2 vector2);
+//powerup
+GLuint vertexID6;
+GLuint vertexBuffer6;
+GLuint uvBuffer6;
+std::vector<glm::vec3> powerVertices;
+std::vector<glm::vec2> powerUV;
+std::vector<glm::vec3> powerNormals;
+GLuint textureID9;
+GLuint textureID10;
 
 /** Globals */
 
@@ -173,6 +181,10 @@ std::vector<glm::vec3> camera_pos = {vec3(3, 4, 3), vec3(0.1, 1.6, 0.1), vec3(3,
 std::vector<glm::vec3> camera_look = {vec3(2, 1, 2), vec3(2, 1, 2),  vec3(2, 1, 2)};
 
 int camera_index=0;
+
+/** Powerups */
+std::vector<glm::vec2> pu_nitro_pos = {vec2(1,0), vec2(2,0), vec2(3,0),vec2(4,0), vec2(5,0)};
+std::vector<glm::vec2> pu_freeze_pos = {vec2(1,1), vec2(2,1), vec2(3,1),vec2(4,1), vec2(5,1)};
 
 /** Checkpoints */
 
@@ -384,6 +396,7 @@ int init_resources()
     bool res3 = loadOBJ("objects/sand2.obj", areiaVertices, areiaUV, areiaNormals);
     bool res4 = loadOBJ("objects/arrow.obj", checkVertices, checkUV, checkNormals);
     bool res5 = loadOBJ("objects/finish.obj", finishVertices, finishUV, finishNormals);
+    bool res6 = loadOBJ("objects/powerup.obj", powerVertices, powerUV, powerNormals);
 
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
@@ -400,6 +413,9 @@ int init_resources()
 
     glGenVertexArrays(1, &vertexID5);
     glBindVertexArray(vertexID5);
+
+    glGenVertexArrays(1, &vertexID6);
+    glBindVertexArray(vertexID6);
 
     gLight.position = vec3(105.0f, 5.0f, 125.0f);
     gLight.intensities = vec3(1.0f, 1.0f, 1.0f);
@@ -466,6 +482,27 @@ int init_resources()
 
     textureID8  = loadBMP_custom("textures/bot3.bmp");
 
+    // bot2 texture
+    glActiveTexture(GL_TEXTURE7);
+    glGenTextures(1, &textureID8);
+    glBindTexture(GL_TEXTURE_2D, textureID8);
+
+    textureID8  = loadBMP_custom("textures/bot3.bmp");
+
+    // powerup nitro texture
+    glActiveTexture(GL_TEXTURE8);
+    glGenTextures(1, &textureID9);
+    glBindTexture(GL_TEXTURE_2D, textureID9);
+
+    textureID9  = loadBMP_custom("textures/pu_nitro.bmp");
+
+    // powerup nitro texture
+    glActiveTexture(GL_TEXTURE9);
+    glGenTextures(1, &textureID10);
+    glBindTexture(GL_TEXTURE_2D, textureID10);
+
+    textureID10  = loadBMP_custom("textures/pu_freeze.bmp");
+
 
     /** generate and bind vertices and uvs */
     glGenBuffers(1, &vertexBuffer);
@@ -506,6 +543,14 @@ int init_resources()
     glGenBuffers(1, &uvBuffer5);
     glBindBuffer(GL_ARRAY_BUFFER, uvBuffer5);
     glBufferData(GL_ARRAY_BUFFER, finishUV.size() * sizeof(glm::vec2), &finishUV[0], GL_STATIC_DRAW);
+
+    glGenBuffers(1, &vertexBuffer6);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer6);
+    glBufferData(GL_ARRAY_BUFFER, powerVertices.size() * sizeof(glm::vec3), &powerVertices[0], GL_STATIC_DRAW);
+
+    glGenBuffers(1, &uvBuffer6);
+    glBindBuffer(GL_ARRAY_BUFFER, uvBuffer6);
+    glBufferData(GL_ARRAY_BUFFER, powerUV.size() * sizeof(glm::vec2), &powerUV[0], GL_STATIC_DRAW);
 
     return programID;
 }
@@ -591,9 +636,6 @@ void specialKeyboardUp(int key, int x, int y)
     }
 }
 
-unsigned long long x;
-unsigned long long y;
-
 void print(int x, int y, char *message)
 {
     //set the position of the text in the window using the x and y coordinates
@@ -638,9 +680,6 @@ void idle()
     struct timeval start_timer, end_timer;
 
     long mtime, seconds, useconds;
-
-    posx = bot_position[0].x;
-    posz = bot_position[0].y;
 
     gettimeofday(&start_timer, NULL);
 
@@ -735,7 +774,6 @@ void idle()
 
         }
 
-
         for(i = 0; i < checkpoints.size()-1; i++)
         {
             dis = minimum_distance(checkpoints[i], checkpoints[i+1], car_pos);
@@ -746,7 +784,6 @@ void idle()
                 mindis = dis;
             }
         }
-        //i++;
 
         dis = minimum_distance(checkpoints[i], checkpoints[0], car_pos);
         if ( dis < mindis)
@@ -795,6 +832,30 @@ void idle()
         sound2->play();
         sound2->setPitchShift(abs(velocity)*5);
         sound2->setVolume(abs(velocity)*1.3);
+
+        sphereCollider car_sphere;
+        sphereCollider pu_sphere;
+
+        /** Power ups */
+        getObjectSphereCollider(&car_sphere, posx, posz, car_radius);
+
+        for(int i = 0; i < pu_nitro_pos.size(); i++){
+            getObjectSphereCollider(&pu_sphere, pu_nitro_pos[i].x, pu_nitro_pos[i].y, 1.0);
+            if(SphereColliderCmp(car_sphere, pu_sphere)){
+                printf("Colidindo com a esfera %d de Nitro \n", i);
+                // troca posição da esfera pra uma aleatória (função)
+                // adiciona o power up
+            }
+        }
+
+        for(int i = 0; i < pu_freeze_pos.size(); i++){
+            getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 1.0);
+            if(SphereColliderCmp(car_sphere, pu_sphere)){
+                printf("Colidindo com a esfera %d de Freeze \n", i);
+                // troca posição da esfera pra uma aleatória (função)
+                // adiciona o power up
+            }
+        }
 
 
         //andar para frente ou para tras
@@ -1077,11 +1138,6 @@ void onDisplay()
 
     glUseProgram(programID);
 
-    glLoadIdentity();
-
-	glColor3f(0,1,0);
-    drawBitmapText("Osama Hosam's OpenGL Tutorials",30,30,0);
-
     glm::mat4 Projection = glm::perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f);
 
     glm::mat4 View       = glm::lookAt(
@@ -1137,6 +1193,26 @@ void onDisplay()
     MVP        = Projection * View * Model * transBot3 * escBot3 * rotBot3 * fixBot3;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID8, 7, carVertices.size());
+
+    // powerups
+    glm::mat4 transPower;
+    glm::mat4 rotPower;
+
+    for(int i = 0; i < pu_nitro_pos.size(); i++){
+        transPower = glm::translate(mat4(1.0f), vec3(pu_nitro_pos[i].x, 2.0f, pu_nitro_pos[i].y));
+        rotPower = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
+        MVP        = Projection * View * Model * transPower * rotPower;
+        glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+        drawMesh(0, vertexBuffer6, 1, uvBuffer6, textureID9, 8, powerVertices.size());
+    }
+
+    for(int i = 0; i < pu_freeze_pos.size(); i++){
+        transPower = glm::translate(mat4(1.0f), vec3(pu_freeze_pos[i].x, 2.0f, pu_freeze_pos[i].y));
+        rotPower = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
+        MVP        = Projection * View * Model * transPower * rotPower;
+        glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+        drawMesh(0, vertexBuffer6, 1, uvBuffer6, textureID10, 9, powerVertices.size());
+    }
 
     // sand
     glm::mat4 transSand = glm::translate(mat4(1.0f), vec3(0.0f, 1.0f, 0.0f));
