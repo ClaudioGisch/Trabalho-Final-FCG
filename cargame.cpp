@@ -105,19 +105,19 @@ string gravel = "sounds/gravel.mp3";
 string success = "sounds/success.mp3";
 int currentMusic = 0;
 bool changingMusic = false;
-int playListSize = 1;
+int playListSize = 6;
 float volume = 0.1f;
 bool changingVolume = false;
 AudioDevicePtr device(OpenDevice());
 
 OutputStreamPtr s_success(OpenSound(device, success.c_str(), false));
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
-//OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
-//OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
-//OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
-//OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
-//OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
-OutputStreamPtr playList[] = {sound/*, track1, track2, track3, track4, track5*/};
+OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
+OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
+OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
+OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
+OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
+OutputStreamPtr playList[] = {sound, track1, track2, track3, track4, track5};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 
@@ -298,8 +298,8 @@ vec2 vetor_unitario_ponto(vec2 p1, vec2 p2){
 vec2 move_car(vec2 p1, vec2 p2, int bot){
     float distance_before = distance(p1, p2);
     vec2 bot_direction = vetor_unitario_ponto(p1, p2);
-    p1.y += bot_direction.y;
-    p1.x += bot_direction.x;
+    p1.y += bot_direction.y*(0.7);
+    p1.x += bot_direction.x*(0.7);
     float distance_after = distance(p1, p2);
     if(distance_before <= distance_after){
         bot_last_pinpoint[bot]++;
@@ -689,6 +689,32 @@ void idle()
             currentMusic = 0;
         }
     }
+    // camera
+    if(current_camera_delay > 0){
+        current_camera_delay -= 0.05;
+    }
+    else{
+        current_camera_delay = 0;
+    }
+
+    if(keystates['v'])
+    {
+        if(current_camera_delay <= 0)
+        {
+            camera_index++;
+
+            if(camera_index == camera_pos.size())
+            {
+                camera_index = 0;
+            }
+
+            current_camera_pos = camera_pos[camera_index];
+            current_camera_look = camera_look[camera_index];
+
+            current_camera_delay = change_camera_delay;
+        }
+
+    }
 
     if(!keystates['p'])
     {
@@ -910,33 +936,6 @@ void idle()
             camAngle = camAngle - 360;
         if (camAngle < 0)
             camAngle = 360 + camAngle;
-
-        // camera
-        if(current_camera_delay > 0){
-            current_camera_delay -= 0.05;
-        }
-        else{
-            current_camera_delay = 0;
-        }
-
-        if(keystates['v'])
-        {
-            if(current_camera_delay <= 0)
-            {
-                camera_index++;
-
-                if(camera_index == camera_pos.size())
-                {
-                    camera_index = 0;
-                }
-
-                current_camera_pos = camera_pos[camera_index];
-                current_camera_look = camera_look[camera_index];
-
-                current_camera_delay = change_camera_delay;
-            }
-
-        }
     }
     else
     {
