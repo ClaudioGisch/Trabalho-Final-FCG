@@ -16,6 +16,7 @@
 
 // Include GLM
 #include "glm/glm.hpp"
+
 #include "glm/gtc/matrix_transform.hpp"
 #include "audiere-1.9.4-win32/include/audiere.h"
 #include "glm/gtc/type_ptr.hpp"
@@ -26,8 +27,11 @@ using namespace audiere;
 #include "common/shader.cpp"
 #include "common/texture.cpp"
 #include "common/objloader.cpp"
+#include "common/text2D.cpp"
 
 #define pi 3.14159265
+#define MAXSPEED 1.0
+#define TURNINGSPEED 1.3f
 
 bool keystates[256];
 
@@ -99,6 +103,7 @@ GLuint textureID11;
 /** Globals */
 
 int number_of_laps = 0;
+int number_of_laps_to_win = 4;
 
 /** Sound */
 
@@ -159,11 +164,11 @@ int upArrow = 0;
 int downArrow = 1;
 int rightArrow = 2;
 int leftArrow = 3;
-float turning_speed = 1.3f;
+float turning_speed = TURNINGSPEED;
 double velocity = 0;
 int slowFactorAreia = 5;
 double acceleration = 0.005;
-double maxSpeed = 1.0;
+double maxSpeed = MAXSPEED;
 bool drift = false;
 int bot_number = 3;
 int bot_last_pinpoint[3] = {0,0,0};
@@ -184,9 +189,36 @@ std::vector<glm::vec3> camera_look = {vec3(2, 1, 2), vec3(2, 1, 2),  vec3(2, 1, 
 int camera_index=0;
 
 /** Powerups */
+typedef struct pu {
+    int type; // 0: nitro, 1: freeze, 2: handle
+    float duration;
+} powerup;
+
+int pu_index = 0;
 std::vector<glm::vec2> pu_nitro_pos = {vec2(88.1, 0.4), vec2(31.1, 53.7), vec2(85.7, 167.6),vec2(3.6, 233.2), vec2(-96.9, 14.9)};
 std::vector<glm::vec2> pu_freeze_pos = {vec2(1,3), vec2(5,3), vec2(9,3),vec2(13,3), vec2(17,3)};
 std::vector<glm::vec2> pu_handle_pos = {vec2(1,-3), vec2(5,-3), vec2(9,-3),vec2(13,-3), vec2(17,-3)};
+
+powerup nitro;
+powerup freeze;
+powerup handle;
+
+std::vector<powerup> powerup_types = {nitro, freeze, handle};
+
+bool car_occupied_slot = false;
+powerup car_pu_slot;
+float car_powerup_delay_upd = 0; //atualiza
+
+void initPowerups(){
+    nitro.type = 0;
+    nitro.duration = 6;
+
+    freeze.type = 1;
+    freeze.duration = 6;
+
+    handle.type = 2;
+    handle.duration = 6;
+}
 
 /** Checkpoints */
 
@@ -238,6 +270,17 @@ float fps = 0;
 int currentTime = 0, previousTime = 0;
 
 /** Funções auxiliares */
+
+int pseudo = -2;
+
+int pseudoRandom2(){
+    pseudo += 2;
+    if(pseudo > 2){
+        pseudo = -2;
+    }
+
+    return pseudo;
+}
 
 /** Sphere Collision */
 
@@ -408,6 +451,8 @@ int init_resources()
     bool res4 = loadOBJ("objects/arrow.obj", checkVertices, checkUV, checkNormals);
     bool res5 = loadOBJ("objects/finish.obj", finishVertices, finishUV, finishNormals);
     bool res6 = loadOBJ("objects/powerup.obj", powerVertices, powerUV, powerNormals);
+
+    initText2D("textures/Arial.dds");
 
     //setup vertexID
     glGenVertexArrays(1, &vertexID);
@@ -846,33 +891,92 @@ void idle()
         sphereCollider car_sphere;
         sphereCollider pu_sphere;
 
+        int offset;
+        int pos = checkpoints.size();
+
         /** Power ups */
         getObjectSphereCollider(&car_sphere, posx, posz, car_radius);
 
+        offset = rand() % pos;
+
         for(int i = 0; i < pu_nitro_pos.size(); i++){
-            getObjectSphereCollider(&pu_sphere, pu_nitro_pos[i].x, pu_nitro_pos[i].y, 1.5);
+            getObjectSphereCollider(&pu_sphere, pu_nitro_pos[i].x, pu_nitro_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Nitro \n", i);
-                // troca posição da esfera pra uma aleatória (função)
-                // adiciona o power up
+                if(!car_occupied_slot){
+                    // troca posição da esfera pra uma aleatória (função)
+                    pu_nitro_pos[i].x = checkpoints[offset].x + pseudoRandom2();
+                    pu_nitro_pos[i].y = checkpoints[offset].y + pseudoRandom2();
+                    // adiciona o power up
+                    car_occupied_slot = true;
+                    car_pu_slot = nitro;
+                }
+
             }
         }
 
         for(int i = 0; i < pu_freeze_pos.size(); i++){
-            getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 1.5);
+            getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Freeze \n", i);
-                // troca posição da esfera pra uma aleatória (função)
-                // adiciona o power up
+
+                if(!car_occupied_slot){
+                    // troca posição da esfera pra uma aleatória (função)
+                    pu_freeze_pos[i].x = checkpoints[offset].x + pseudoRandom2();
+                    pu_freeze_pos[i].y = checkpoints[offset].y + pseudoRandom2();
+                    // adiciona o power up
+                    car_occupied_slot = true;
+                    car_pu_slot = freeze;
+                }
             }
         }
 
         for(int i = 0; i < pu_handle_pos.size(); i++){
-            getObjectSphereCollider(&pu_sphere, pu_handle_pos[i].x, pu_handle_pos[i].y, 1.5);
+            getObjectSphereCollider(&pu_sphere, pu_handle_pos[i].x, pu_handle_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Handle \n", i);
-                // troca posição da esfera pra uma aleatória (função)
-                // adiciona o power up
+
+                if(!car_occupied_slot){
+                    // troca posição da esfera pra uma aleatória (função)
+                    pu_handle_pos[i].x = checkpoints[offset].x + pseudoRandom2();
+                    pu_handle_pos[i].y = checkpoints[offset].y + pseudoRandom2();
+                    // adiciona o power up
+                    car_occupied_slot = true;
+                    car_pu_slot = handle;
+                }
+            }
+        }
+
+        if(car_powerup_delay_upd > 0){
+            car_powerup_delay_upd -= 0.05;
+        }
+        else{
+            car_powerup_delay_upd = 0;
+            maxSpeed = MAXSPEED;
+            turning_speed = TURNINGSPEED;
+        }
+
+        if (keystates['b']){
+            if(car_occupied_slot){
+                car_occupied_slot = false;
+                switch(car_pu_slot.type){
+                    case 0: //nitro
+                        printf("Usou nitro\n");
+                        velocity = velocity * 2;
+                        maxSpeed = MAXSPEED * 1.5;
+                        car_powerup_delay_upd = nitro.duration;
+                        break;
+
+                    case 1: //freeze
+                        printf("Usou freeze\n");
+                        break;
+
+                    case 2: //handle
+                        printf("Usou handle\n");
+                        turning_speed = TURNINGSPEED * 2.0f;
+                        car_powerup_delay_upd = handle.duration;
+                        break;
+                }
             }
         }
 
@@ -1060,13 +1164,10 @@ void idle()
 
         if(checkpoint_index == checkpoints.size()){
             checkpoint_index = 0;
+            number_of_laps++;
         }
         current_checkpoint_pos = checkpoints[checkpoint_index];
-
-        checkpoint_angle = crossAngle(checkpoints[checkpoint_index] - checkpoints[checkpoint_index-1], checkpoints[checkpoint_index+1] - checkpoints[checkpoint_index]);
     }
-
-    printf("Arrow angle: %.2f\n", checkpoint_angle);
 
     glutPostRedisplay();
 
@@ -1139,15 +1240,28 @@ void drawMesh(int vAttri, GLuint vBuffer,
     glDrawArrays(GL_TRIANGLES, 0, vSize );
 }
 
-void drawBitmapText(char *string,float x,float y,float z)
-{
-	char *c;
-	glRasterPos3f(x, y,z);
+void printToScreen(){
+    printText2D("Speed:", 10, 20, 30);
 
-	for (c=string; *c != '\0'; c++)
-	{
-		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, *c);
-	}
+    char speed[5];
+ 	snprintf(speed, 6, "%f", abs(velocity*100.0));
+
+    printText2D(speed, 200, 20, 30);
+
+    printText2D("Lap:", 10, 60, 30);
+
+    char lap[5];
+ 	snprintf(lap, 6, "%d", number_of_laps);
+
+ 	printText2D(lap, 150, 60, 30);
+
+ 	printText2D("/", 180, 60, 30);
+
+ 	char lap2[5];
+ 	snprintf(lap2, 6, "%d", number_of_laps_to_win);
+
+ 	printText2D(lap2, 210, 60, 30);
+
 }
 
 void onDisplay()
@@ -1266,6 +1380,8 @@ void onDisplay()
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer5, 1, uvBuffer5, textureID5, 4, finishVertices.size());
 
+    printToScreen();
+
     //disable
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -1300,7 +1416,11 @@ int main(int argc, char* argv[])
     current_camera_look = camera_look[0];
     camera_index = 0;
 
+    srand (time(NULL));
+
     current_checkpoint_pos = pinpoints[0];
+
+    initPowerups();
 
     GLenum glew_status = glewInit();
     if (glew_status != GLEW_OK)
