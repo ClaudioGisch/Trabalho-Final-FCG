@@ -124,7 +124,7 @@ string plateia = "sounds/plateia.mp3";
 string cardrive = "sounds/carrun.mp3";
 string gravel = "sounds/gravel.mp3";
 string success = "sounds/success.mp3";
-string colision = "sounds/colision.mp3";
+string collision = "sounds/colision.mp3";
 int currentMusic = 0;
 bool changingMusic = false;
 int playListSize = 1;
@@ -135,16 +135,10 @@ AudioDevicePtr device(OpenDevice());
 OutputStreamPtr s_success(OpenSound(device, success.c_str(), false));
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
 OutputStreamPtr plat_sound(OpenSound(device, plateia.c_str(), false));
-//OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
-//OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
-//OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
-//OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
-//OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
-//OutputStreamPtr track6(OpenSound(device, topgear1.c_str(), false));
-OutputStreamPtr playList[] = {sound/*, track6, track1, track2, track3, track4, track5*/};
+OutputStreamPtr playList[] = {sound};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
-OutputStreamPtr sound4(OpenSound(device, colision.c_str(), false));
+OutputStreamPtr sound4(OpenSound(device, collision.c_str(), false));
 
 
 /** Light */
@@ -161,6 +155,16 @@ GLfloat ambientShininess = 0.30;
 
 //fps
 float game_fps = 60;
+
+//  The number of frames
+int frameCount = 0;
+
+//  Number of frames per second
+float fps = 0;
+
+//  currentTime - previousTime is the time elapsed
+//  between every call of the Idle function
+int currentTime = 0, previousTime = 0;
 
 /** player position */
 double posx = 3;
@@ -182,6 +186,9 @@ int slowFactorAreia = 5;
 double acceleration = 0.005;
 double maxSpeed = MAXSPEED;
 bool drift = false;
+
+/** Bots */
+
 int bot_number = 3;
 int bot_last_pinpoint[3] = {0,0,0};
 vec2 bot_position[3] = {vec2(3.0, 3.0), vec2(6.0, 3.0), vec2(6.0, 0.0)};
@@ -190,14 +197,13 @@ float bot_velocity[3] = {0,0,0};
 float bot_maxSpeed[3] = {MAXSPEED, MAXSPEED*1.1, MAXSPEED*1.2};
 int bot_laps[3] = {0,0,0};
 
-/** camera */
+/** Camera */
 glm::vec3 current_camera_pos;
 glm::vec3 current_camera_look;
 
 float change_camera_delay = 0.5;
 float current_camera_delay = 0.5;
 
-// normal camera +
 std::vector<glm::vec3> camera_pos = {vec3(3, 4, 3), vec3(0.1, 1.6, 0.1), vec3(3, 2, 3)};
 std::vector<glm::vec3> camera_look = {vec3(2, 1, 2), vec3(2, 1, 2),  vec3(2, 1, 2)};
 
@@ -242,7 +248,7 @@ double checkpoint_radius = 12.0;
 int checkpoint_index = 0;
 float checkpoint_angle = 0;
 
-/** terrain info */
+/** Terrain Info */
 double road_length = 8.0;
 
 std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.4, 3.5), vec2(101.2, 5.8), vec2(102.9, 8.2),
@@ -268,20 +274,11 @@ std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.
                                        vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-28.1, 0.0)
                                        };
 
-//  The number of frames
-int frameCount = 0;
-
-//  Number of frames per second
-float fps = 0;
-
-//  currentTime - previousTime is the time elapsed
-//  between every call of the Idle function
-int currentTime = 0, previousTime = 0;
-
 /** Funções auxiliares */
 
 int pseudo = -2;
 
+// alterna entre -2, 0, 2
 int pseudoRandom2(){
     pseudo += 2;
     if(pseudo > 2){
@@ -303,6 +300,7 @@ void restart_game(){
     currentTime = 0;
     previousTime = 0;
     frameCount = 0;
+
     /** player position */
     posx = 3;
     posz = 0;
@@ -348,9 +346,10 @@ void restart_game(){
     pu_handle_pos = {vec2(32.2, 50.7), vec2(-4.4, 98.9), vec2(-37.1, 0.0)};
 }
 
+/** --- Collision Detection --- */
+
 /** Sphere Collision */
 
-// colliders
 typedef struct sphere_col
 {
     double radius;
@@ -376,7 +375,7 @@ bool SphereColliderCmp(sphereCollider sphere1, sphereCollider sphere2)
     return sum_radius > distance;
 }
 
-/** Retactangular Collision */
+/** Retactangular Collision */ // não utilizado
 typedef struct ret_col
 {
     vec2 up;
@@ -497,8 +496,6 @@ void loadTexture(unsigned int width, unsigned int height, const unsigned char * 
         data // data
     );
 }
-
-int tamanho;
 
 int init_resources()
 {
@@ -761,20 +758,6 @@ void specialKeyboardUp(int key, int x, int y)
     }
 }
 
-void print(int x, int y, char *message)
-{
-    //set the position of the text in the window using the x and y coordinates
-    glRasterPos2f(x,y);
-    //get the length of the string to display
-    int len = (int) strlen(message);
-
-    //loop to display character by character
-    for (int i = 0; i < len; i++)
-    {
-        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24,message[i]);
-    }
-}
-
 void calculateFPS()
 {
     //  Increase frame count
@@ -835,6 +818,7 @@ void idle()
             changingVolume = true;
             volume -= 0.02;
             playList[currentMusic]->setVolume(volume);
+            plat_sound->setVolume(volume);
         }
     }
     if(keystates['k'] && !changingVolume)
@@ -844,6 +828,7 @@ void idle()
             changingVolume = true;
             volume += 0.02;
             playList[currentMusic]->setVolume(volume);
+            plat_sound->setVolume(volume);
         }
     }
     if(keystates['u'] && !changingMusic)
@@ -936,10 +921,8 @@ void idle()
             mindis = dis;
         }
 
-        printf("\n Distance to middle: %.2f\n",mindis);
         if(mindis > road_length)
         {
-            printf(" Voce esta na areia!\n");
             if (abs(velocity) > maxSpeed/slowFactorAreia)
             {
                 if (velocity > 0)
@@ -969,7 +952,6 @@ void idle()
         else
         {
             sound3->stop();
-            printf(" Voce esta na pista!\n");
             posy = 1.5f;
         }
 
@@ -993,7 +975,6 @@ void idle()
         for(int i = 0; i < pu_nitro_pos.size(); i++){
             getObjectSphereCollider(&pu_sphere, pu_nitro_pos[i].x, pu_nitro_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
-                printf("Colidindo com a esfera %d de Nitro \n", i);
                 if(!car_occupied_slot){
                     // troca posição da esfera pra uma aleatória (função)
                     pu_nitro_pos[i].x = checkpoints[offset].x + pseudoRandom2();
@@ -1009,7 +990,6 @@ void idle()
         for(int i = 0; i < pu_freeze_pos.size(); i++){
             getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
-                printf("Colidindo com a esfera %d de Freeze \n", i);
                 if(!car_occupied_slot){
                     // troca posição da esfera pra uma aleatória (função)
                     pu_freeze_pos[i].x = checkpoints[offset].x + pseudoRandom2();
@@ -1024,7 +1004,6 @@ void idle()
         for(int i = 0; i < pu_handle_pos.size(); i++){
             getObjectSphereCollider(&pu_sphere, pu_handle_pos[i].x, pu_handle_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
-                printf("Colidindo com a esfera %d de Handle \n", i);
                 if(!car_occupied_slot){
                     // troca posição da esfera pra uma aleatória (função)
                     pu_handle_pos[i].x = checkpoints[offset].x + pseudoRandom2();
@@ -1048,7 +1027,6 @@ void idle()
         for(int bot = 0; bot < bot_number; bot++){
             getObjectSphereCollider(&bot_sphere, bot_position[bot].x, bot_position[bot].y, 1.6);
             if(SphereColliderCmp(car_sphere, bot_sphere)){
-                printf("Colidindo com o bot %d! \n", bot);
                 sound4->play();
                 sound4->setPitchShift(1.6);
                 sound4->setVolume(2);
@@ -1071,14 +1049,12 @@ void idle()
                 int nearst_car = -1;
                 switch(car_pu_slot.type){
                     case 0: //nitro
-                        printf("Usou nitro\n");
                         velocity = velocity * 1.5;
                         maxSpeed = MAXSPEED * 1.2;
                         car_powerup_delay_upd = nitro.duration;
                         break;
 
                     case 1: //freeze
-                        printf("Usou freeze\n");
                         for(bot = 0; bot < bot_number; bot++){
                             float cars_distance = distance(car_pos, bot_position[bot]);
                             if(cars_distance < min_distance){
@@ -1090,7 +1066,6 @@ void idle()
                         break;
 
                     case 2: //handle
-                        printf("Usou handle\n");
                         turning_speed = TURNINGSPEED * 2.0f;
                         car_powerup_delay_upd = handle.duration;
                         break;
@@ -1361,8 +1336,6 @@ void idle()
 
     char gameName[] = "Super Speed Runners";
 
-    print(0.1f, 0.1f, gameName);
-
     printf("Elapsed time: %ld milliseconds\n", mtime);
 
     printf("\n FPS: %.2f\n Angle: %.0f\n X,Y,Z = (%.1f, %.1f, %.1f)\n Velocity = %.2f\n", fps, car_angle, posx, 0.0, posz, velocity);
@@ -1467,6 +1440,7 @@ void printToScreen(){
         printText2D("RACE PAUSED", 160, 500, 50);
  	}
  	if(begining_game){
+        printText2D("SUPER SPEED RUNNERS", 30, 500, 40);
         if(count_down>=1){
             char cont[5];
             snprintf(cont, 6, "%d", int(count_down));
