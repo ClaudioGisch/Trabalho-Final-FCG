@@ -102,7 +102,7 @@ GLuint textureID11;
 
 /** Globals */
 
-int number_of_laps = 0;
+int number_of_laps = 5;
 int number_of_laps_to_win = 4;
 int place = 1;
 float count_down = 4;
@@ -692,8 +692,10 @@ void keyboardDown(unsigned char key, int x, int y)
     {
         if(keystates[key])
         {
-            keystates[key] = false;
-            camAngle = pauseCamAngle;
+            if(!race_over){
+                keystates[key] = false;
+                camAngle = pauseCamAngle;
+            }
         }
         else
         {
