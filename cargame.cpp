@@ -688,8 +688,10 @@ void keyboardDown(unsigned char key, int x, int y)
     {
         if(keystates[key])
         {
-            keystates[key] = false;
-            camAngle = pauseCamAngle;
+            if(!race_over){
+                keystates[key] = false;
+                camAngle = pauseCamAngle;
+            }
         }
         else
         {
