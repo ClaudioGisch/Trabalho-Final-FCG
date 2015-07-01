@@ -187,7 +187,7 @@ int bot_last_pinpoint[3] = {0,0,0};
 vec2 bot_position[3] = {vec2(3.0, 3.0), vec2(6.0, 3.0), vec2(6.0, 0.0)};
 float bot_angle[3] = {0.0f, 0.0f, 0.0f};
 float bot_velocity[3] = {0,0,0};
-float bot_maxSpeed[3] = {MAXSPEED, MAXSPEED*1.05, MAXSPEED*1.1};
+float bot_maxSpeed[3] = {MAXSPEED, MAXSPEED*1.1, MAXSPEED*1.2};
 int bot_laps[3] = {0,0,0};
 
 /** camera */
