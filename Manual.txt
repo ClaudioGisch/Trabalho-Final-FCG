@@ -1,0 +1,24 @@
+--Jogo em andamento
+/\ - Andar para frente
+\/ - Andar para trás
+< - Virar para esquerda
+> - Virar para direita
+Barra de Espaço - Utilizar poder especial
+V - Trocar de camera
+W- Olhar para frente
+S - Olhar para trás
+J - Abaixar volume da música
+K - Aumentar volume da música
+U - Tocar música anterior
+I - Tocar próxima música
+P - Pausar jogo
+
+--Durante pause
+
+P - Despausar jogo
+Q - Rotacionar camera a esquerda
+E - Rotacionar camera a direita
+W- Olhar para frente
+S - Olhar para trás
+R - Reiniciar jogo
+
