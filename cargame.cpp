@@ -226,28 +226,6 @@ std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.
                                        vec2(-96.9, 14.9), vec2(-95.7, 11.9), vec2(-93.4, 7.7), vec2(-91.2, 5.2), vec2(-89.5, 3.8),
                                        vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-37.1, 0.0)
                                        };
-std::vector<glm::vec2> bot1_checkpoints = {vec2(90.1, 2.4), vec2(94.1, 3.2), vec2(100.4, 5.5), vec2(103.2, 7.8), vec2(104.9, 10.2),
-                                       vec2(107.3, 14.4), vec2(108.6, 19.3), vec2(108.2, 26.7), vec2(106.2, 32.1), vec2(103.8, 35.8),
-                                       vec2(100.3, 38.3), vec2(96.2, 40.5), vec2(92.6, 41.2), vec2(86.6, 41.9), vec2(50.5, 42.1),
-                                       vec2(47.1, 42.8), vec2(43.6, 44.0), vec2(39.8, 45.9), vec2(36.5, 49.5), vec2(34.2, 52.7),
-                                       vec2(33.1, 55.7), vec2(32.4, 58.7), vec2(31.9, 62.9), vec2(31.9, 91.2), vec2(32.3, 95.7),
-                                       vec2(33.2, 100.0), vec2(34.4, 105.0), vec2(36.3, 109.0), vec2(39.2, 113.7), vec2(42.7, 117.0),
-                                       vec2(45.5, 120.4), vec2(49.3, 123.7), vec2(53.3, 127.1), vec2(74.0, 142.5), vec2(79.3, 147.7),
-                                       vec2(82.1, 151.6), vec2(85.2, 156.6), vec2(85.9, 159.3), vec2(86.8, 162.4), vec2(87.5, 166.0),
-                                       vec2(87.7, 169.6), vec2(87.9, 174.3), vec2(87.8, 210.3), vec2(87.3, 216.4), vec2(86.4, 221.6),
-                                       vec2(85.1, 225.9), vec2(83.0, 230.8), vec2(81.0, 235.0), vec2(78.6, 238.3), vec2(74.4, 243.3),
-                                       vec2(70.9, 246.1), vec2(66.7, 248.9), vec2(63.1, 251.1), vec2(58.9, 252.5), vec2(53.6, 254.1),
-                                       vec2(47.4, 255.1), vec2(43.5, 255.4), vec2(38.7, 255.4), vec2(34.6, 254.8), vec2(29.3, 253.5),
-                                       vec2(24.4, 251.6), vec2(20.2, 249.6), vec2(15.9, 247.2), vec2(12.4, 244.1), vec2(8.5, 239.8),
-                                       vec2(5.6, 235.2), vec2(3.1, 230.4), vec2(1.4, 225.7), vec2(0.4, 221.5), vec2(-0.3, 215.7),
-                                       vec2(-0.8, 209.9), vec2(-1.0, 204.7), vec2(-1.0, 163.8), vec2(-1.0, 108.0), vec2(-1.3, 104.3),
-                                       vec2(-2.4, 100.9), vec2(-3.5, 98.8), vec2(-5.7, 95.6), vec2(-8.4, 92.8), vec2(-12.1, 90.3),
-                                       vec2(-15.9, 88.7), vec2(-19.0, 88.0), vec2(-22.8, 87.9), vec2(-27.5, 88.0), vec2(-57.0, 87.9),
-                                       vec2(-78.3, 87.7), vec2(-83.1, 86.8), vec2(-86.1, 85.0), vec2(-89.9, 82.3), vec2(-92.7, 78.8),
-                                       vec2(-94.3, 75.3), vec2(-95.1, 71.8), vec2(-95.5, 67.5), vec2(-95.5, 41.8), vec2(-95.6, 21.4),
-                                       vec2(-94.9, 16.9), vec2(-93.7, 13.9), vec2(-91.4, 9.7), vec2(-89.2, 7.2), vec2(-87.5, 5.8),
-                                       vec2(-83.5, 3.6),  vec2(-79.7, 2.3), vec2(-77.4, 1.9), vec2(-74.9, 2.0), vec2(-35.1, 2.0)
-                                       };
 
 //  The number of frames
 int frameCount = 0;
@@ -485,7 +463,7 @@ int init_resources()
     glGenTextures(1, &textureID4);
     glBindTexture(GL_TEXTURE_2D, textureID4);
 
-    textureID4  = loadBMP_custom("textures/arrow.bmp");
+    textureID4  = loadBMP_custom("textures/green.bmp");
 
     //checkpoint texture
     glActiveTexture(GL_TEXTURE4);
@@ -1277,16 +1255,14 @@ void onDisplay()
 
     // arrow
     glm::mat4 escArrow = glm::scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
-    glm::mat4 transArrow = glm::translate(mat4(1.0f), vec3(current_checkpoint_pos.x, 2.5f, current_checkpoint_pos.y));
-    glm::mat4 rotArrow = glm::rotate(mat4(1.0f), checkpoint_angle, vec3(0, 1.0f, 0));
+    glm::mat4 transArrow = glm::translate(mat4(1.0f), vec3(current_checkpoint_pos.x, 5.0f, current_checkpoint_pos.y));
+    glm::mat4 rotArrow = glm::rotate(mat4(1.0f), 90.0f, vec3(1.0, 0.0f, 0));
     MVP        = Projection * View * Model * transArrow * escArrow * rotArrow;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer4, 1, uvBuffer4, textureID4, 3, checkVertices.size());
-
     // finish
-    glm::mat4 escFinish = glm::scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
-    glm::mat4 transFinish = glm::translate(mat4(1.0f), vec3(1.0f, 1.5f, 1.0f));
-    MVP        = Projection * View * Model;
+    glm::mat4 transFinish = glm::translate(mat4(1.0f), vec3(-37.1f, -0.25f, 0.5f));
+    MVP        = Projection * View * Model * transFinish;
     glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
     drawMesh(0, vertexBuffer5, 1, uvBuffer5, textureID5, 4, finishVertices.size());
 
