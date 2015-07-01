@@ -30,7 +30,7 @@ using namespace audiere;
 #include "common/text2D.cpp"
 
 #define pi 3.14159265
-#define MAXSPEED 1.0
+#define MAXSPEED 0.7
 #define TURNINGSPEED 1.3f
 
 bool keystates[256];
@@ -104,6 +104,11 @@ GLuint textureID11;
 
 int number_of_laps = 0;
 int number_of_laps_to_win = 4;
+int place = 1;
+float count_down = 4;
+bool race_over = false;
+bool game_pause = false;
+bool begining_game = true;
 
 /** Sound */
 
@@ -113,10 +118,12 @@ string deathfire_grasp = "playlist/deathfire_grasp.mp3";
 string last_whisper = "playlist/last_whisper.mp3";
 string megitsune = "playlist/megitsune.mp3";
 string angus_mcfife = "playlist/angus_mcfife.mp3";
+string topgear1 = "playlist/topgear1.mp3";
 string background = "sounds/happyrock.mp3";
 string cardrive = "sounds/carrun.mp3";
 string gravel = "sounds/gravel.mp3";
 string success = "sounds/success.mp3";
+string colision = "sounds/colision.mp3";
 int currentMusic = 0;
 bool changingMusic = false;
 int playListSize = 1;
@@ -131,9 +138,12 @@ OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
 //OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
 //OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
 //OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
-OutputStreamPtr playList[] = {sound/*, track1, track2, track3, track4, track5*/};
+//OutputStreamPtr track6(OpenSound(device, topgear1.c_str(), false));
+OutputStreamPtr playList[] = {sound/*, track6, track1, track2, track3, track4, track5*/};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
+OutputStreamPtr sound4(OpenSound(device, colision.c_str(), false));
+
 
 /** Light */
 
@@ -173,7 +183,10 @@ bool drift = false;
 int bot_number = 3;
 int bot_last_pinpoint[3] = {0,0,0};
 vec2 bot_position[3] = {vec2(3.0, 3.0), vec2(6.0, 3.0), vec2(6.0, 0.0)};
-float bot_angle[3] = {270.0f, 270.0f, 270.0f};
+float bot_angle[3] = {0.0f, 0.0f, 0.0f};
+float bot_velocity[3] = {0,0,0};
+float bot_maxSpeed[3] = {MAXSPEED, MAXSPEED*1.05, MAXSPEED*1.1};
+int bot_laps[3] = {0,0,0};
 
 /** camera */
 glm::vec3 current_camera_pos;
@@ -195,9 +208,9 @@ typedef struct pu {
 } powerup;
 
 int pu_index = 0;
-std::vector<glm::vec2> pu_nitro_pos = {vec2(88.1, 0.4), vec2(31.1, 53.7), vec2(85.7, 167.6),vec2(3.6, 233.2), vec2(-96.9, 14.9)};
-std::vector<glm::vec2> pu_freeze_pos = {vec2(1,3), vec2(5,3), vec2(9,3),vec2(13,3), vec2(17,3)};
-std::vector<glm::vec2> pu_handle_pos = {vec2(1,-3), vec2(5,-3), vec2(9,-3),vec2(13,-3), vec2(17,-3)};
+std::vector<glm::vec2> pu_nitro_pos = {vec2(88.1, 0.4), vec2(31.1, 53.7), vec2(85.7, 167.6)};
+std::vector<glm::vec2> pu_freeze_pos = {vec2(32.4, 103.0), vec2(10.4, 242.1), vec2(-93.4, 7.7)};
+std::vector<glm::vec2> pu_handle_pos = {vec2(32.2, 50.7), vec2(-4.4, 98.9), vec2(-37.1, 0.0)};
 
 powerup nitro;
 powerup freeze;
@@ -214,7 +227,7 @@ void initPowerups(){
     nitro.duration = 6;
 
     freeze.type = 1;
-    freeze.duration = 6;
+    freeze.duration = 4;
 
     handle.type = 2;
     handle.duration = 6;
@@ -256,7 +269,7 @@ std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.
                                        vec2(-80.3, 85.7), vec2(-85.1, 84.8), vec2(-88.1, 83.0), vec2(-91.9, 80.3), vec2(-94.7, 76.8),
                                        vec2(-96.3, 73.3), vec2(-97.1, 69.8), vec2(-97.5, 65.5), vec2(-97.5, 39.8), vec2(-97.6, 19.4),
                                        vec2(-96.9, 14.9), vec2(-95.7, 11.9), vec2(-93.4, 7.7), vec2(-91.2, 5.2), vec2(-89.5, 3.8),
-                                       vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-37.1, 0.0)
+                                       vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-28.1, 0.0)
                                        };
 
 //  The number of frames
@@ -280,6 +293,63 @@ int pseudoRandom2(){
     }
 
     return pseudo;
+}
+
+void restart_game(){
+    race_over = false;
+    number_of_laps = 0;
+    place = 1;
+    count_down = 4;
+    game_pause = false;
+    begining_game = true;
+    keystates['p'] = true;
+
+    currentTime = 0;
+    previousTime = 0;
+    frameCount = 0;
+    /** player position */
+    posx = 3;
+    posz = 0;
+    posy = 1.5f;
+
+    /* Some globals */
+    car_angle = 270;
+    camAngle = 0;
+    pauseCamAngle = 0;
+    velocity = 0;
+    maxSpeed = 1.0;
+    drift = false;
+    bot_last_pinpoint[0] = 0;
+    bot_last_pinpoint[1] = 0;
+    bot_last_pinpoint[2] = 0;
+    bot_position[0] = vec2(3.0, 3.0);
+    bot_position[1] = vec2(6.0, 3.0);
+    bot_position[2] = vec2(6.0, 0.0);
+    bot_angle[0] = 0.0f;
+    bot_angle[1] = 0.0f;
+    bot_angle[2] = 0.0f;
+    bot_velocity[0] = 0.0f;
+    bot_velocity[1] = 0.0f;
+    bot_velocity[2] = 0.0f;
+    bot_maxSpeed[0] = MAXSPEED;
+    bot_maxSpeed[1] = MAXSPEED;
+    bot_maxSpeed[2] = MAXSPEED;
+    bot_laps[0] = 0;
+    bot_laps[1] = 0;
+    bot_laps[2] = 0;
+
+    change_camera_delay = 0.5;
+    current_camera_delay = 0.5;
+
+    pseudo = -2;
+
+    //Power-ups
+    car_occupied_slot = false;
+    car_powerup_delay_upd = 0;
+    pu_index = 0;
+    pu_nitro_pos = {vec2(88.1, 0.4), vec2(31.1, 53.7), vec2(85.7, 167.6)};
+    pu_freeze_pos = {vec2(32.4, 103.0), vec2(10.4, 242.1), vec2(-93.4, 7.7)};
+    pu_handle_pos = {vec2(32.2, 50.7), vec2(-4.4, 98.9), vec2(-37.1, 0.0)};
 }
 
 /** Sphere Collision */
@@ -364,13 +434,14 @@ vec2 move_car(vec2 p1, vec2 p2, int bot){
     p2.x += deslocation;
     float distance_before = distance(p1, p2);
     vec2 bot_direction = vetor_unitario_ponto(p1, p2);
-    p1.y += bot_direction.y*(0.7);
-    p1.x += bot_direction.x*(0.7);
+    p1.y += bot_direction.y * bot_velocity[bot];
+    p1.x += bot_direction.x * bot_velocity[bot];
     float distance_after = distance(p1, p2);
     if(distance_before <= distance_after){
         bot_last_pinpoint[bot]++;
         if(bot_last_pinpoint[bot] == checkpoints.size()){
             bot_last_pinpoint[bot] = 0;
+            bot_laps[bot]++;
         }
     }
 
@@ -739,6 +810,21 @@ void idle()
 
     gettimeofday(&start_timer, NULL);
 
+    if(count_down >= 1){
+        count_down -= 0.02;
+        keystates['p'] = true;
+    }
+    else{
+        if(count_down >= 0){
+            count_down -= 0.02;
+            keystates['p'] = false;
+        }
+        else{
+            begining_game = false;
+        }
+    }
+
+
     if(!(playList[currentMusic]->isPlaying()))
     {
         playList[currentMusic]->play();
@@ -813,7 +899,7 @@ void idle()
 
     if(!keystates['p'])
     {
-
+        game_pause = false;
         float mindis = 10000;
         glm::vec2 car_pos;
         vec2 bot_pos;
@@ -826,6 +912,12 @@ void idle()
         int bot;
         int deslocation;
         for(bot = 0; bot < bot_number; bot++){
+            if(bot_velocity[bot] < bot_maxSpeed[bot]){
+                bot_velocity[bot] += acceleration;
+            }
+            if(bot_velocity[bot] > bot_maxSpeed[bot]){
+                bot_velocity[bot] -= acceleration*3;
+            }
             bot_position[bot] = move_car(bot_position[bot], checkpoints[bot_last_pinpoint[bot]], bot);
         }
 
@@ -890,13 +982,14 @@ void idle()
 
         sphereCollider car_sphere;
         sphereCollider pu_sphere;
+        sphereCollider bot_sphere;
 
         int offset;
         int pos = checkpoints.size();
 
         /** Power ups */
         getObjectSphereCollider(&car_sphere, posx, posz, car_radius);
-
+        srand (time(NULL));
         offset = rand() % pos;
 
         for(int i = 0; i < pu_nitro_pos.size(); i++){
@@ -919,7 +1012,6 @@ void idle()
             getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Freeze \n", i);
-
                 if(!car_occupied_slot){
                     // troca posição da esfera pra uma aleatória (função)
                     pu_freeze_pos[i].x = checkpoints[offset].x + pseudoRandom2();
@@ -935,7 +1027,6 @@ void idle()
             getObjectSphereCollider(&pu_sphere, pu_handle_pos[i].x, pu_handle_pos[i].y, 2.0);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Handle \n", i);
-
                 if(!car_occupied_slot){
                     // troca posição da esfera pra uma aleatória (função)
                     pu_handle_pos[i].x = checkpoints[offset].x + pseudoRandom2();
@@ -956,19 +1047,48 @@ void idle()
             turning_speed = TURNINGSPEED;
         }
 
-        if (keystates['b']){
+        for(int bot = 0; bot < bot_number; bot++){
+            getObjectSphereCollider(&bot_sphere, bot_position[bot].x, bot_position[bot].y, 1.6);
+            if(SphereColliderCmp(car_sphere, bot_sphere)){
+                printf("Colidindo com o bot %d! \n", bot);
+                sound4->play();
+                sound4->setPitchShift(1.6);
+                sound4->setVolume(2);
+                float aux = bot_velocity[bot];
+                if(velocity > 0){
+                    bot_velocity[bot] = 0;
+                    velocity = aux/2;
+                }
+                if(velocity <= 0){
+                    bot_velocity[bot] += abs(velocity)/3;
+                    velocity = velocity/3;
+                }
+            }
+        }
+
+        if (keystates[' ']){
             if(car_occupied_slot){
                 car_occupied_slot = false;
+                float min_distance = 10000;
+                int nearst_car = -1;
                 switch(car_pu_slot.type){
                     case 0: //nitro
                         printf("Usou nitro\n");
-                        velocity = velocity * 2;
-                        maxSpeed = MAXSPEED * 1.5;
+                        velocity = velocity * 1.5;
+                        maxSpeed = MAXSPEED * 1.2;
                         car_powerup_delay_upd = nitro.duration;
                         break;
 
                     case 1: //freeze
                         printf("Usou freeze\n");
+                        for(bot = 0; bot < bot_number; bot++){
+                            float cars_distance = distance(car_pos, bot_position[bot]);
+                            if(cars_distance < min_distance){
+                                min_distance = cars_distance;
+                                nearst_car = bot;
+                            }
+                        }
+                        bot_velocity[nearst_car] = 0;
                         break;
 
                     case 2: //handle
@@ -1111,6 +1231,14 @@ void idle()
                 }
             }
         }
+        if(abs(velocity) > maxSpeed + acceleration){
+            if(velocity < 0){
+                velocity += acceleration;
+            }
+            else{
+                velocity -= acceleration;
+            }
+        }
 
         if (car_angle >= 360)
             car_angle = car_angle - 360;
@@ -1125,6 +1253,9 @@ void idle()
     {
         sound2->stop();
         sound3->stop();
+        if(!race_over){
+            game_pause = true;
+        }
         if(keystates['q'])
         {
             camAngle += 0.5f;
@@ -1140,6 +1271,9 @@ void idle()
         if(keystates['s'])
         {
             camAngle = 180;
+        }
+        if(keystates['r']){
+            restart_game();
         }
     }
 
@@ -1167,6 +1301,41 @@ void idle()
             number_of_laps++;
         }
         current_checkpoint_pos = checkpoints[checkpoint_index];
+        if(number_of_laps > number_of_laps_to_win){
+            keystates['p'] = true;
+            race_over = true;
+        }
+    }
+
+    for(int bot=0; bot < bot_number; bot++){
+        if(number_of_laps < bot_laps[bot]){
+            place++;
+            if(place > 4){
+                place = 4;
+            }
+        }
+        else{
+            if(number_of_laps == bot_laps[bot]){
+                if(checkpoint_index <= bot_last_pinpoint[bot]){
+                    place++;
+                    if(place > 4){
+                        place = 4;
+                    }
+                }
+                else{
+                    place --;
+                    if(place < 1){
+                        place = 1;
+                    }
+                }
+            }
+            else{
+                place--;
+                if(place < 1){
+                    place = 1;
+                }
+            }
+        }
     }
 
     glutPostRedisplay();
@@ -1261,6 +1430,54 @@ void printToScreen(){
  	snprintf(lap2, 6, "%d", number_of_laps_to_win);
 
  	printText2D(lap2, 210, 60, 30);
+
+ 	printText2D("Place:", 10, 100, 30);
+
+ 	char position[5];
+    snprintf(position, 6, "%d", place);
+
+    printText2D(position, 190, 100, 30);
+
+ 	printText2D("/", 220, 100, 30);
+
+ 	printText2D(lap2, 250, 100, 30);
+
+ 	printText2D("Power:", 10, 140, 30);
+
+ 	if(car_occupied_slot){
+        switch(car_pu_slot.type){
+            case 0: printText2D("Nitro", 190, 140, 30);
+                    break;
+            case 1: printText2D("Freeze", 190, 140, 30);
+                    break;
+            case 2: printText2D("Handle", 190, 140, 30);
+                    break;
+        }
+ 	}
+ 	else{
+        printText2D("None", 190, 140, 30);
+ 	}
+
+
+ 	if(race_over){
+        printText2D("RACE OVER", 180, 500, 50);
+        char position[40];
+        snprintf(position, 9, "%d Place", place);
+        printText2D(position, 220, 440, 50);
+ 	}
+ 	if(game_pause && !begining_game){
+        printText2D("RACE PAUSED", 160, 500, 50);
+ 	}
+ 	if(begining_game){
+        if(count_down>=1){
+            char cont[5];
+            snprintf(cont, 6, "%d", int(count_down));
+            printText2D(cont, 390, 400, 50);
+        }
+        else{
+            printText2D("GO", 380, 400, 50);
+        }
+ 	}
 
 }
 
