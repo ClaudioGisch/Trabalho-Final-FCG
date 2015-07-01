@@ -94,6 +94,7 @@ std::vector<glm::vec2> powerUV;
 std::vector<glm::vec3> powerNormals;
 GLuint textureID9;
 GLuint textureID10;
+GLuint textureID11;
 
 /** Globals */
 
@@ -113,19 +114,19 @@ string gravel = "sounds/gravel.mp3";
 string success = "sounds/success.mp3";
 int currentMusic = 0;
 bool changingMusic = false;
-int playListSize = 6;
+int playListSize = 1;
 float volume = 0.1f;
 bool changingVolume = false;
 AudioDevicePtr device(OpenDevice());
 
 OutputStreamPtr s_success(OpenSound(device, success.c_str(), false));
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
-OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
-OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
-OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
-OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
-OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
-OutputStreamPtr playList[] = {sound, track1, track2, track3, track4, track5};
+//OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
+//OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
+//OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
+//OutputStreamPtr track4(OpenSound(device, deathfire_grasp.c_str(), false));
+//OutputStreamPtr track5(OpenSound(device, last_whisper.c_str(), false));
+OutputStreamPtr playList[] = {sound/*, track1, track2, track3, track4, track5*/};
 OutputStreamPtr sound2(OpenSound(device, cardrive.c_str(), false));
 OutputStreamPtr sound3(OpenSound(device, gravel.c_str(), false));
 
@@ -150,7 +151,7 @@ double posz = 0;
 double posy = 1.5f;
 
 /* Some globals */
-double car_radius = 1;
+double car_radius = 0.8;
 float car_angle = 270;
 float camAngle = 0;
 float pauseCamAngle = 0;
@@ -158,7 +159,7 @@ int upArrow = 0;
 int downArrow = 1;
 int rightArrow = 2;
 int leftArrow = 3;
-float turning_speed = 1.6f;
+float turning_speed = 1.3f;
 double velocity = 0;
 int slowFactorAreia = 5;
 double acceleration = 0.005;
@@ -183,8 +184,9 @@ std::vector<glm::vec3> camera_look = {vec3(2, 1, 2), vec3(2, 1, 2),  vec3(2, 1, 
 int camera_index=0;
 
 /** Powerups */
-std::vector<glm::vec2> pu_nitro_pos = {vec2(1,0), vec2(2,0), vec2(3,0),vec2(4,0), vec2(5,0)};
-std::vector<glm::vec2> pu_freeze_pos = {vec2(1,1), vec2(2,1), vec2(3,1),vec2(4,1), vec2(5,1)};
+std::vector<glm::vec2> pu_nitro_pos = {vec2(88.1, 0.4), vec2(31.1, 53.7), vec2(85.7, 167.6),vec2(3.6, 233.2), vec2(-96.9, 14.9)};
+std::vector<glm::vec2> pu_freeze_pos = {vec2(1,3), vec2(5,3), vec2(9,3),vec2(13,3), vec2(17,3)};
+std::vector<glm::vec2> pu_handle_pos = {vec2(1,-3), vec2(5,-3), vec2(9,-3),vec2(13,-3), vec2(17,-3)};
 
 /** Checkpoints */
 
@@ -223,6 +225,28 @@ std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.
                                        vec2(-96.3, 73.3), vec2(-97.1, 69.8), vec2(-97.5, 65.5), vec2(-97.5, 39.8), vec2(-97.6, 19.4),
                                        vec2(-96.9, 14.9), vec2(-95.7, 11.9), vec2(-93.4, 7.7), vec2(-91.2, 5.2), vec2(-89.5, 3.8),
                                        vec2(-85.5, 1.6),  vec2(-81.7, 0.3), vec2(-79.4, -0.1), vec2(-76.9, 0.0), vec2(-37.1, 0.0)
+                                       };
+std::vector<glm::vec2> bot1_checkpoints = {vec2(90.1, 2.4), vec2(94.1, 3.2), vec2(100.4, 5.5), vec2(103.2, 7.8), vec2(104.9, 10.2),
+                                       vec2(107.3, 14.4), vec2(108.6, 19.3), vec2(108.2, 26.7), vec2(106.2, 32.1), vec2(103.8, 35.8),
+                                       vec2(100.3, 38.3), vec2(96.2, 40.5), vec2(92.6, 41.2), vec2(86.6, 41.9), vec2(50.5, 42.1),
+                                       vec2(47.1, 42.8), vec2(43.6, 44.0), vec2(39.8, 45.9), vec2(36.5, 49.5), vec2(34.2, 52.7),
+                                       vec2(33.1, 55.7), vec2(32.4, 58.7), vec2(31.9, 62.9), vec2(31.9, 91.2), vec2(32.3, 95.7),
+                                       vec2(33.2, 100.0), vec2(34.4, 105.0), vec2(36.3, 109.0), vec2(39.2, 113.7), vec2(42.7, 117.0),
+                                       vec2(45.5, 120.4), vec2(49.3, 123.7), vec2(53.3, 127.1), vec2(74.0, 142.5), vec2(79.3, 147.7),
+                                       vec2(82.1, 151.6), vec2(85.2, 156.6), vec2(85.9, 159.3), vec2(86.8, 162.4), vec2(87.5, 166.0),
+                                       vec2(87.7, 169.6), vec2(87.9, 174.3), vec2(87.8, 210.3), vec2(87.3, 216.4), vec2(86.4, 221.6),
+                                       vec2(85.1, 225.9), vec2(83.0, 230.8), vec2(81.0, 235.0), vec2(78.6, 238.3), vec2(74.4, 243.3),
+                                       vec2(70.9, 246.1), vec2(66.7, 248.9), vec2(63.1, 251.1), vec2(58.9, 252.5), vec2(53.6, 254.1),
+                                       vec2(47.4, 255.1), vec2(43.5, 255.4), vec2(38.7, 255.4), vec2(34.6, 254.8), vec2(29.3, 253.5),
+                                       vec2(24.4, 251.6), vec2(20.2, 249.6), vec2(15.9, 247.2), vec2(12.4, 244.1), vec2(8.5, 239.8),
+                                       vec2(5.6, 235.2), vec2(3.1, 230.4), vec2(1.4, 225.7), vec2(0.4, 221.5), vec2(-0.3, 215.7),
+                                       vec2(-0.8, 209.9), vec2(-1.0, 204.7), vec2(-1.0, 163.8), vec2(-1.0, 108.0), vec2(-1.3, 104.3),
+                                       vec2(-2.4, 100.9), vec2(-3.5, 98.8), vec2(-5.7, 95.6), vec2(-8.4, 92.8), vec2(-12.1, 90.3),
+                                       vec2(-15.9, 88.7), vec2(-19.0, 88.0), vec2(-22.8, 87.9), vec2(-27.5, 88.0), vec2(-57.0, 87.9),
+                                       vec2(-78.3, 87.7), vec2(-83.1, 86.8), vec2(-86.1, 85.0), vec2(-89.9, 82.3), vec2(-92.7, 78.8),
+                                       vec2(-94.3, 75.3), vec2(-95.1, 71.8), vec2(-95.5, 67.5), vec2(-95.5, 41.8), vec2(-95.6, 21.4),
+                                       vec2(-94.9, 16.9), vec2(-93.7, 13.9), vec2(-91.4, 9.7), vec2(-89.2, 7.2), vec2(-87.5, 5.8),
+                                       vec2(-83.5, 3.6),  vec2(-79.7, 2.3), vec2(-77.4, 1.9), vec2(-74.9, 2.0), vec2(-35.1, 2.0)
                                        };
 
 //  The number of frames
@@ -308,6 +332,15 @@ vec2 vetor_unitario_ponto(vec2 p1, vec2 p2){
 }
 
 vec2 move_car(vec2 p1, vec2 p2, int bot){
+    int deslocation = 0;
+    if(bot == 1){
+        deslocation = 2;
+    }
+    if(bot == 2){
+        deslocation = -2;
+    }
+    p2.y += deslocation;
+    p2.x += deslocation;
     float distance_before = distance(p1, p2);
     vec2 bot_direction = vetor_unitario_ponto(p1, p2);
     p1.y += bot_direction.y*(0.7);
@@ -475,14 +508,7 @@ int init_resources()
 
     textureID7  = loadBMP_custom("textures/bot2.bmp");
 
-    // bot2 texture
-    glActiveTexture(GL_TEXTURE7);
-    glGenTextures(1, &textureID8);
-    glBindTexture(GL_TEXTURE_2D, textureID8);
-
-    textureID8  = loadBMP_custom("textures/bot3.bmp");
-
-    // bot2 texture
+    // bot3 texture
     glActiveTexture(GL_TEXTURE7);
     glGenTextures(1, &textureID8);
     glBindTexture(GL_TEXTURE_2D, textureID8);
@@ -496,12 +522,19 @@ int init_resources()
 
     textureID9  = loadBMP_custom("textures/pu_nitro.bmp");
 
-    // powerup nitro texture
+    // powerup freeze texture
     glActiveTexture(GL_TEXTURE9);
     glGenTextures(1, &textureID10);
     glBindTexture(GL_TEXTURE_2D, textureID10);
 
     textureID10  = loadBMP_custom("textures/pu_freeze.bmp");
+
+    // powerup handle texture
+    glActiveTexture(GL_TEXTURE10);
+    glGenTextures(1, &textureID11);
+    glBindTexture(GL_TEXTURE_2D, textureID11);
+
+    textureID11  = loadBMP_custom("textures/pu_handle.bmp");
 
 
     /** generate and bind vertices and uvs */
@@ -768,10 +801,9 @@ void idle()
         int i = 0;
 
         int bot;
+        int deslocation;
         for(bot = 0; bot < bot_number; bot++){
-
             bot_position[bot] = move_car(bot_position[bot], checkpoints[bot_last_pinpoint[bot]], bot);
-
         }
 
         for(i = 0; i < checkpoints.size()-1; i++)
@@ -830,7 +862,7 @@ void idle()
 
         // engine
         sound2->play();
-        sound2->setPitchShift(abs(velocity)*5);
+        sound2->setPitchShift(abs(velocity)*7);
         sound2->setVolume(abs(velocity)*1.3);
 
         sphereCollider car_sphere;
@@ -840,7 +872,7 @@ void idle()
         getObjectSphereCollider(&car_sphere, posx, posz, car_radius);
 
         for(int i = 0; i < pu_nitro_pos.size(); i++){
-            getObjectSphereCollider(&pu_sphere, pu_nitro_pos[i].x, pu_nitro_pos[i].y, 1.0);
+            getObjectSphereCollider(&pu_sphere, pu_nitro_pos[i].x, pu_nitro_pos[i].y, 1.5);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Nitro \n", i);
                 // troca posição da esfera pra uma aleatória (função)
@@ -849,9 +881,18 @@ void idle()
         }
 
         for(int i = 0; i < pu_freeze_pos.size(); i++){
-            getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 1.0);
+            getObjectSphereCollider(&pu_sphere, pu_freeze_pos[i].x, pu_freeze_pos[i].y, 1.5);
             if(SphereColliderCmp(car_sphere, pu_sphere)){
                 printf("Colidindo com a esfera %d de Freeze \n", i);
+                // troca posição da esfera pra uma aleatória (função)
+                // adiciona o power up
+            }
+        }
+
+        for(int i = 0; i < pu_handle_pos.size(); i++){
+            getObjectSphereCollider(&pu_sphere, pu_handle_pos[i].x, pu_handle_pos[i].y, 1.5);
+            if(SphereColliderCmp(car_sphere, pu_sphere)){
+                printf("Colidindo com a esfera %d de Handle \n", i);
                 // troca posição da esfera pra uma aleatória (função)
                 // adiciona o power up
             }
@@ -1195,23 +1236,35 @@ void onDisplay()
     drawMesh(0, vertexBuffer2, 1, uvBuffer2, textureID8, 7, carVertices.size());
 
     // powerups
+    glm::mat4 escPower;
     glm::mat4 transPower;
     glm::mat4 rotPower;
 
     for(int i = 0; i < pu_nitro_pos.size(); i++){
-        transPower = glm::translate(mat4(1.0f), vec3(pu_nitro_pos[i].x, 2.0f, pu_nitro_pos[i].y));
+        escPower = glm::scale(mat4(1.0f), vec3(0.6f, 0.6f, 0.6f));
+        transPower = glm::translate(mat4(1.0f), vec3(pu_nitro_pos[i].x, 1.5f, pu_nitro_pos[i].y));
         rotPower = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
-        MVP        = Projection * View * Model * transPower * rotPower;
+        MVP        = Projection * View * Model * transPower * escPower * rotPower;
         glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
         drawMesh(0, vertexBuffer6, 1, uvBuffer6, textureID9, 8, powerVertices.size());
     }
 
     for(int i = 0; i < pu_freeze_pos.size(); i++){
-        transPower = glm::translate(mat4(1.0f), vec3(pu_freeze_pos[i].x, 2.0f, pu_freeze_pos[i].y));
+        escPower = glm::scale(mat4(1.0f), vec3(0.6f, 0.6f, 0.6f));
+        transPower = glm::translate(mat4(1.0f), vec3(pu_freeze_pos[i].x, 1.5f, pu_freeze_pos[i].y));
         rotPower = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
-        MVP        = Projection * View * Model * transPower * rotPower;
+        MVP        = Projection * View * Model * transPower * escPower * rotPower;
         glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
         drawMesh(0, vertexBuffer6, 1, uvBuffer6, textureID10, 9, powerVertices.size());
+    }
+
+    for(int i = 0; i < pu_handle_pos.size(); i++){
+        escPower = glm::scale(mat4(1.0f), vec3(0.6f, 0.6f, 0.6f));
+        transPower = glm::translate(mat4(1.0f), vec3(pu_handle_pos[i].x, 1.5f, pu_handle_pos[i].y));
+        rotPower = glm::rotate(mat4(1.0f), 0.0f, vec3(0, 1.0f, 0));
+        MVP        = Projection * View * Model * transPower * escPower * rotPower;
+        glUniformMatrix4fv(matrixID, 1, GL_FALSE, &MVP[0][0]);
+        drawMesh(0, vertexBuffer6, 1, uvBuffer6, textureID11, 9, powerVertices.size());
     }
 
     // sand
