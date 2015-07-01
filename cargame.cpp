@@ -120,6 +120,7 @@ string megitsune = "playlist/megitsune.mp3";
 string angus_mcfife = "playlist/angus_mcfife.mp3";
 string topgear1 = "playlist/topgear1.mp3";
 string background = "sounds/happyrock.mp3";
+string plateia = "sounds/plateia.mp3";
 string cardrive = "sounds/carrun.mp3";
 string gravel = "sounds/gravel.mp3";
 string success = "sounds/success.mp3";
@@ -133,6 +134,7 @@ AudioDevicePtr device(OpenDevice());
 
 OutputStreamPtr s_success(OpenSound(device, success.c_str(), false));
 OutputStreamPtr sound(OpenSound(device, background.c_str(), false));
+OutputStreamPtr plat_sound(OpenSound(device, plateia.c_str(), false));
 //OutputStreamPtr track1(OpenSound(device, megitsune.c_str(), false));
 //OutputStreamPtr track2(OpenSound(device, angus_mcfife.c_str(), false));
 //OutputStreamPtr track3(OpenSound(device, lightbringer.c_str(), false));
@@ -242,12 +244,6 @@ float checkpoint_angle = 0;
 
 /** terrain info */
 double road_length = 8.0;
-
-std::vector<glm::vec2> pinpoints = {vec2(88.0, 0.0), vec2(90.0, 75.0), vec2(120.0, 75.0), vec2(120.0, 31.0),
-                                    vec2(196.0, 31.0), vec2(196.0, -45.0), vec2(151.0, -45.0), vec2(151.0, -95.0),
-                                    vec2(132.0, -95.0), vec2(117.0, -79.0), vec2(43.0, -79.0), vec2(43.0, -45.0),
-                                    vec2(-23.0, -45.0), vec2(-23.0, 0.0)
-                                   };
 
 std::vector<glm::vec2> checkpoints = {vec2(88.1, 0.4), vec2(92.1, 1.2), vec2(98.4, 3.5), vec2(101.2, 5.8), vec2(102.9, 8.2),
                                        vec2(105.3, 12.4), vec2(106.6, 17.3), vec2(106.2, 24.7), vec2(104.2, 30.1), vec2(101.8, 33.8),
@@ -1635,9 +1631,13 @@ int main(int argc, char* argv[])
 
     srand (time(NULL));
 
-    current_checkpoint_pos = pinpoints[0];
+    current_checkpoint_pos = checkpoints[0];
 
     initPowerups();
+
+    plat_sound->play();
+    plat_sound->setRepeat(true);
+    plat_sound->setVolume(0.15f);
 
     GLenum glew_status = glewInit();
     if (glew_status != GLEW_OK)
